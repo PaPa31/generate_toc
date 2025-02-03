@@ -161,6 +161,29 @@ create_toc_file() {
 EOF
 }
 
+# Generate breadcrumbs HTML for the current page.
+# Usage: generate_breadcrumbs "Current Page Title"
+generate_breadcrumbs() {
+  local current_title="$1"
+  local breadcrumbs=""
+
+  # If a home link is defined, add it.
+  if [ -n "$BREADCRUMB_HOME" ]; then
+    breadcrumbs="<a href=\"$BREADCRUMB_HOME\">Home</a> &gt; "
+  fi
+
+  # If a book-level link is defined, add it.
+  if [ -n "$BREADCRUMB_BOOK" ]; then
+    breadcrumbs="${breadcrumbs}<a href=\"$BREADCRUMB_BOOK\">Book</a> &gt; "
+  fi
+
+  # Add the current page (non-linked)
+  breadcrumbs="${breadcrumbs}<span>${current_title}</span>"
+
+  echo "$breadcrumbs"
+}
+
+
 # Add navigation block to HTML files
 add_navigation() {
   local files="$1"
@@ -172,11 +195,22 @@ add_navigation() {
   for next in $files; do
     if [ -n "$curr" ]; then
       local strip_anchor=$(echo "$curr" | cut -d '#' -f 1)
+
+      # Extract the current title from the HTML file.
+      local current_title=$(grep -m1 -oP '(?<=<title>).*?(?=</title>)' "$strip_anchor")
+      [ -z "$current_title" ] && current_title="$strip_anchor"
+
+      # Generate breadcrumbs for the current file.
+      local breadcrumbs=$(generate_breadcrumbs "$current_title")
+
+      # Build navigation block including breadcrumbs.
       local nav_block="<div class=\"navigation\">\n"
+      nav_block="$nav_block  <div class=\"breadcrumbs\">$breadcrumbs</div>\n"
       [ -n "$prev" ] && nav_block="$nav_block  <span><a href=\"$prev\">Previous</a></span>\n"
       nav_block="$nav_block  <span><a href=\"$TOC_FILE\">Contents</a></span>\n"
       [ -n "$next" ] && nav_block="$nav_block  <span><a href=\"$next\">Next</a></span>\n"
-      nav_block="$nav_block$DARK_TOGGLE</div>"
+      nav_block="$nav_block  $DARK_TOGGLE\n"
+      nav_block="$nav_block</div>"
 
       sed -i -e ':a' -e 'N' -e '$!ba' -e "s|</head>.*<body>|$between$nav_block$SCRIPT|" "$strip_anchor"
     fi
@@ -184,12 +218,21 @@ add_navigation() {
     curr=$next
   done
 
+  # Handle the last file
   if [ -n "$curr" ]; then
     local strip_anchor=$(echo "$curr" | cut -d '#' -f 1)
+
+    local current_title=$(grep -m1 -oP '(?<=<title>).*?(?=</title>)' "$strip_anchor")
+    [ -z "$current_title" ] && current_title="$strip_anchor"
+
+    local breadcrumbs=$(generate_breadcrumbs "$current_title")
+
     local nav_block="<div class=\"navigation\">\n"
+    nav_block="$nav_block  <div class=\"breadcrumbs\">$breadcrumbs</div>\n"
     [ -n "$prev" ] && nav_block="$nav_block  <span><a href=\"$prev\">Previous</a></span>\n"
     nav_block="$nav_block  <span><a href=\"$TOC_FILE\">Contents</a></span>\n"
-    nav_block="$nav_block$DARK_TOGGLE</div>"
+    nav_block="$nav_block  $DARK_TOGGLE\n"
+    nav_block="$nav_block</div>"
 
     sed -i -e ':a' -e 'N' -e '$!ba' -e "s|</head>.*<body>|$between$nav_block$SCRIPT|" "$strip_anchor"
   fi
