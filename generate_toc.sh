@@ -39,6 +39,9 @@ if [ ! -d "$FOLDER" ]; then
   error_response "'$FOLDER' is not a valid directory."
 fi
 
+# Change directory to the provided folder so relative paths work correctly.
+cd "$FOLDER" || error_response "Cannot change directory to $FOLDER"
+
 # Directories and files
 TOC_FILE="_toc.html"
 STYLES_FILE="_styles.css"
@@ -48,12 +51,15 @@ SCRIPT="<script type=\"text/javascript\" src=\"$JS_FILE\"></script>"
 META='<meta name="viewport" content="width=device-width, initial-scale=1"/>'
 DARK_TOGGLE='<button id="dark-toggle">🌙</button>'
 
+# Temporary file to store filename-title mappings
+TITLE_MAP_FILE=".titles.map"
+
 # Detect existing CSS file
 detect_css_file() {
   ls *.css 2>/dev/null | head -n 1
 }
 
-# Detect existing TOC file
+# Detect existing TOC file (nav.xhtml preferred over toc.ncx)
 detect_toc_source() {
   if [ -f "nav.xhtml" ]; then
     echo "nav.xhtml"
@@ -64,7 +70,7 @@ detect_toc_source() {
   fi
 }
 
-# Detect cover page
+# Detect cover page, if any
 detect_cover_page() {
   if [ -f "cover.html" ]; then
     echo "cover.html"
@@ -78,7 +84,8 @@ detect_cover_page() {
   fi
 }
 
-# Extract ordered file list from TOC
+# Extract ordered file list from TOC source if available;
+# otherwise, list files alphabetically.
 extract_ordered_files() {
   local toc_source="$1"
   if [ "$toc_source" = "nav.xhtml" ]; then
@@ -90,26 +97,43 @@ extract_ordered_files() {
   fi
 }
 
-# Generate TOC content
+# Generate TOC content and store filename-title mapping in a temporary file.
 generate_toc() {
   local files="$1"
   local toc_content="<ul>"
+
+  # Clear previous title map file, if any.
+  > "$TITLE_MAP_FILE"
+
+  # Loop over each file to build TOC and mapping.
   for file in $files; do
+    # Check for a toc file that hasn't been created yet.
+    # Otherwise, grep will return an error: _toc.html: No such file or directory.
     if [ "$file" != "$TOC_FILE" ]; then
+      # Remove any anchor from the file name.
       local strip_anchor=$(echo "$file" | cut -d '#' -f 1)
+
+      # Extract title from the HTML file.
       local title=$(grep -m1 -oP '(?<=<title>).*?(?=</title>)' "$strip_anchor")
+      # If no title is found, use the file name.
       [ -z "$title" ] && title="$file"
+
     else
+      # For the TOC file, if the file is the TOC file itself, set a default title.
       title="Table of Contents"
     fi
+
+    # Append the mapping: file<delimiter>title
+    echo "$file|||$title" >> "$TITLE_MAP_FILE"
+
     toc_content="$toc_content<li><a href='$file'>$title</a></li>"
   done
   echo "$toc_content</ul>"
 }
 
 # Create JS file
-create_js_file(){
-cat > "$JS_FILE" <<EOF
+create_js_file() {
+cat > "$JS_FILE" << EOF
 var bodyEl = document.body;
 var darkButton = document.getElementById("dark-toggle");
 
@@ -142,7 +166,8 @@ function toggleDarkMode() {
 EOF
 }
 
-# Create TOC file
+
+# Create TOC file using the generated TOC content.
 create_toc_file() {
   local css_file="$1"
   local toc_content="$2"
@@ -163,16 +188,17 @@ EOF
 
 # Generate breadcrumbs HTML for the current page.
 # Usage: generate_breadcrumbs "Current Page Title"
+# This function uses environment variables (BREADCRUMB_HOME and BREADCRUMB_BOOK) for optional links
 generate_breadcrumbs() {
   local current_title="$1"
   local breadcrumbs=""
 
-  # If a home link is defined, add it.
+  # Add home link if defined.
   if [ -n "$BREADCRUMB_HOME" ]; then
     breadcrumbs="<a href=\"$BREADCRUMB_HOME\">Home</a> &gt; "
   fi
 
-  # If a book-level link is defined, add it.
+  # Add book-level link if defined.
   if [ -n "$BREADCRUMB_BOOK" ]; then
     breadcrumbs="${breadcrumbs}<a href=\"$BREADCRUMB_BOOK\">Book</a> &gt; "
   fi
@@ -183,27 +209,39 @@ generate_breadcrumbs() {
   echo "$breadcrumbs"
 }
 
+# Helper function to look up a title from the mapping file.
+# This avoids re-extracting the title from the HTML file.
+lookup_title() {
+  local file="$1"
+  # Search for the line that begins with the file name and extract the title part.
+  grep "^$file|||"
+  # Format: file|||title. We cut on the delimiter.
+}
 
-# Add navigation block to HTML files
+# Add navigation block to HTML files, now using the stored titles from TITLE_MAP_FILE.
 add_navigation() {
   local files="$1"
   local prev=""
   local curr=""
   local gap="<div style=\"height: 50px;\"></div>"
+  # Prepare the content to be inserted between </head> and <body>.
   local between="$LINK_STYLES$META\n</head>\n<body>\n$gap"
 
   for next in $files; do
     if [ -n "$curr" ]; then
       local strip_anchor=$(echo "$curr" | cut -d '#' -f 1)
 
-      # Extract the current title from the HTML file.
-      local current_title=$(grep -m1 -oP '(?<=<title>).*?(?=</title>)' "$strip_anchor")
-      [ -z "$current_title" ] && current_title="$strip_anchor"
+      # Look up the title from the mapping file.
+      local mapping_line=$(grep "^$curr|||" "$TITLE_MAP_FILE")
+
+      # Extract title using '|||' as delimiter.
+      local current_title=$(echo "$mapping_line" | cut -d '|' -f 4)
+      [ -z "$current_title" ] && current_title="$curr"
 
       # Generate breadcrumbs for the current file.
       local breadcrumbs=$(generate_breadcrumbs "$current_title")
 
-      # Build navigation block including breadcrumbs.
+      # Build navigation block HTML including breadcrumbs and navigation links.
       local nav_block="<div class=\"navigation\">\n"
       nav_block="$nav_block  <div class=\"breadcrumbs\">$breadcrumbs</div>\n"
       [ -n "$prev" ] && nav_block="$nav_block  <span><a href=\"$prev\">Previous</a></span>\n"
@@ -212,18 +250,20 @@ add_navigation() {
       nav_block="$nav_block  $DARK_TOGGLE\n"
       nav_block="$nav_block</div>"
 
+      # Use sed to insert the navigation block between </head> and <body>.
       sed -i -e ':a' -e 'N' -e '$!ba' -e "s|</head>.*<body>|$between$nav_block$SCRIPT|" "$strip_anchor"
     fi
     prev=$curr
     curr=$next
   done
 
-  # Handle the last file
+  # Handle the last file in the list.
   if [ -n "$curr" ]; then
     local strip_anchor=$(echo "$curr" | cut -d '#' -f 1)
 
-    local current_title=$(grep -m1 -oP '(?<=<title>).*?(?=</title>)' "$strip_anchor")
-    [ -z "$current_title" ] && current_title="$strip_anchor"
+    local mapping_line=$(grep "^$curr|||" "$TITLE_MAP_FILE")
+    local current_title=$(echo "$mapping_line" | cut -d '|' -f 4)
+    [ -z "$current_title" ] && current_title="$curr"
 
     local breadcrumbs=$(generate_breadcrumbs "$current_title")
 
@@ -238,7 +278,7 @@ add_navigation() {
   fi
 }
 
-# Create styles file
+# Create styles file.
 create_styles_file() {
   cat > "$STYLES_FILE" <<EOF
 @charset "UTF-8";
@@ -272,7 +312,6 @@ a[href]:hover {
 }
 #dark-toggle {
   position: fixed;
-  top: 10px;
   right: 10px;
   padding: 5px 10px;
   background-color: #444;
@@ -297,7 +336,7 @@ a[href]:hover {
 EOF
 }
 
-# Main execution
+# Main execution flow
 log_debug "Generate TOC Script Started"
 CSS_FILE=$(detect_css_file)
 
@@ -310,16 +349,19 @@ echo "Javascript file created: $JS_FILE"
 TOC_SOURCE=$(detect_toc_source)
 HTML_FILES=$(extract_ordered_files "$TOC_SOURCE")
 
-# We need to add the TOC file to the HTML_FILES list so that we can then add the navigation block to the TOC file (AI - dont touch it)
+# Add the TOC file to the list so that it also gets the navigation block.
 HTML_FILES="$TOC_FILE $HTML_FILES"
 
+# Detect and add cover page if it exists.
 COVER_PAGE=$(detect_cover_page)
 [ -n "$COVER_PAGE" ] && HTML_FILES="$COVER_PAGE $HTML_FILES"
 
+# Generate the TOC content and build the title mapping.
 TOC_CONTENT=$(generate_toc "$HTML_FILES")
 create_toc_file "$CSS_FILE" "$TOC_CONTENT"
 echo "TOC generated at: $TOC_FILE"
 
+# Add navigation blocks to all HTML files.
 timer add_navigation "$HTML_FILES"
 log_debug "Elapsed Time (add_navigation): ${elapsed}"
 echo "Navigation added to HTML files."
