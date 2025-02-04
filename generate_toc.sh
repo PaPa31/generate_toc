@@ -101,6 +101,7 @@ extract_ordered_files() {
 generate_toc() {
   local files="$1"
   local toc_content="<ul>"
+  local prev=""
 
   # Clear previous title map file, if any.
   > "$TITLE_MAP_FILE"
@@ -121,12 +122,18 @@ generate_toc() {
     else
       # For the TOC file, if the file is the TOC file itself, set a default title.
       title="Table of Contents"
+      strip_anchor="$TOC_FILE"
     fi
 
-    # Append the mapping: file<delimiter>title
-    echo "$file|||$title" >> "$TITLE_MAP_FILE"
+    # Check for "page" and "page#anchor" pairs that block page turning.
+    if [ "$strip_anchor" != "$prev" ]; then
+      # Append the mapping: file<delimiter>title
+      echo "$file|||$title" >> "$TITLE_MAP_FILE"
+    fi
 
     toc_content="$toc_content<li><a href='$file'>$title</a></li>"
+
+    prev="$strip_anchor"
   done
   echo "$toc_content</ul>"
 }
@@ -223,14 +230,15 @@ add_navigation() {
   local files="$1"
   local prev=""
   local curr=""
+  #local strip_anchor=""
   local gap="<div style=\"height: 50px;\"></div>"
   # Prepare the content to be inserted between </head> and <body>.
   local between="$LINK_STYLES$META\n</head>\n<body>\n$gap"
 
   for next in $files; do
-    if [ -n "$curr" ]; then
-      local strip_anchor=$(echo "$curr" | cut -d '#' -f 1)
+    local strip_anchor=$(echo "$next" | cut -d '#' -f 1)
 
+    if [ -n "$curr" ] && [ "$strip_anchor" != $curr ]; then
       # Look up the title from the mapping file.
       local mapping_line=$(grep "^$curr|||" "$TITLE_MAP_FILE")
 
@@ -251,16 +259,18 @@ add_navigation() {
       nav_block="$nav_block</div>"
 
       # Use sed to insert the navigation block between </head> and <body>.
-      sed -i -e ':a' -e 'N' -e '$!ba' -e "s|</head>.*<body>|$between$nav_block$SCRIPT|" "$strip_anchor"
+      sed -i -e ':a' -e 'N' -e '$!ba' -e "s|</head>.*<body>|$between$nav_block$SCRIPT|" "$curr"
+
+      # move it inside the for loop to avoid blocking "Previous"
+      # (when the anchor-pair-problem occurs) when turning pages
+      prev=$curr
     fi
-    prev=$curr
-    curr=$next
+
+    curr=$strip_anchor
   done
 
   # Handle the last file in the list.
   if [ -n "$curr" ]; then
-    local strip_anchor=$(echo "$curr" | cut -d '#' -f 1)
-
     local mapping_line=$(grep "^$curr|||" "$TITLE_MAP_FILE")
     local current_title=$(echo "$mapping_line" | cut -d '|' -f 4)
     [ -z "$current_title" ] && current_title="$curr"
@@ -274,7 +284,7 @@ add_navigation() {
     nav_block="$nav_block  $DARK_TOGGLE\n"
     nav_block="$nav_block</div>"
 
-    sed -i -e ':a' -e 'N' -e '$!ba' -e "s|</head>.*<body>|$between$nav_block$SCRIPT|" "$strip_anchor"
+    sed -i -e ':a' -e 'N' -e '$!ba' -e "s|</head>.*<body>|$between$nav_block$SCRIPT|" "$curr"
   fi
 }
 
