@@ -50,6 +50,9 @@ JS_FILE="_script.js"
 SCRIPT="<script type=\"text/javascript\" src=\"$JS_FILE\"></script>"
 META='<meta name="viewport" content="width=device-width, initial-scale=1"/>'
 DARK_TOGGLE='<button id="dark-toggle">🌙</button>'
+BREADCRUMB_HOME="../../../../"
+BREADCRUMB_BOOK="../"
+
 
 # Temporary file to store filename-title mappings
 TITLE_MAP_FILE=".titles.map"
@@ -202,12 +205,12 @@ generate_breadcrumbs() {
 
   # Add home link if defined.
   if [ -n "$BREADCRUMB_HOME" ]; then
-    breadcrumbs="<a href=\"$BREADCRUMB_HOME\">Home</a> &gt; "
+    breadcrumbs="<a href=\"$BREADCRUMB_HOME\">Home</a> \> "
   fi
 
   # Add book-level link if defined.
   if [ -n "$BREADCRUMB_BOOK" ]; then
-    breadcrumbs="${breadcrumbs}<a href=\"$BREADCRUMB_BOOK\">Book</a> &gt; "
+    breadcrumbs="${breadcrumbs}<a href=\"$BREADCRUMB_BOOK\">Book</a> \> "
   fi
 
   # Add the current page (non-linked)
