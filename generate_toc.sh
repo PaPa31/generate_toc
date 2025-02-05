@@ -128,11 +128,8 @@ generate_toc() {
       strip_anchor="$TOC_FILE"
     fi
 
-    # Check for "page" and "page#anchor" pairs that block page turning.
-    if [ "$strip_anchor" != "$prev" ]; then
-      # Append the mapping: file<delimiter>title
-      echo "$file|||$title" >> "$TITLE_MAP_FILE"
-    fi
+    # Append the mapping: file<delimiter>title
+    echo "$file|||$title" >> "$TITLE_MAP_FILE"
 
     toc_content="$toc_content<li><a href='$file'>$title</a></li>"
 
@@ -241,6 +238,8 @@ add_navigation() {
   for next in $files; do
     local strip_anchor=$(echo "$next" | cut -d '#' -f 1)
 
+    # Ignore "page#anchor" right after "page" as
+    # this pair will block page turning when clicking "Next".
     if [ -n "$curr" ] && [ "$strip_anchor" != $curr ]; then
       # Look up the title from the mapping file.
       local mapping_line=$(grep "^$curr|||" "$TITLE_MAP_FILE")
@@ -265,7 +264,7 @@ add_navigation() {
       sed -i -e ':a' -e 'N' -e '$!ba' -e "s|</head>.*<body>|$between$nav_block$SCRIPT|" "$curr"
 
       # move it inside the for loop to avoid blocking "Previous"
-      # (when the anchor-pair-problem occurs) when turning pages
+      # (when "page#anchor" right after "page" occurs) when turning pages
       prev=$curr
     fi
 
