@@ -323,6 +323,9 @@ a[href]:hover {
   border-bottom: 1px solid #cccccc4d;
   background: inherit
 }
+.breadcrumbs {
+  white-space: nowrap;
+}
 #dark-toggle {
   position: fixed;
   right: 10px;
