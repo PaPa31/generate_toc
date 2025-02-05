@@ -255,9 +255,9 @@ add_navigation() {
       # Build navigation block HTML including breadcrumbs and navigation links.
       local nav_block="<div class=\"navigation\">\n"
       nav_block="$nav_block  <div class=\"breadcrumbs\">$breadcrumbs</div>\n"
-      [ -n "$prev" ] && nav_block="$nav_block  <span><a href=\"$prev\">Previous</a></span>\n"
+      [ -n "$prev" ] && nav_block="$nav_block  <span>\< <a href=\"$prev\">Previous</a></span>\n"
       nav_block="$nav_block  <span><a href=\"$TOC_FILE\">Contents</a></span>\n"
-      [ -n "$next" ] && nav_block="$nav_block  <span><a href=\"$next\">Next</a></span>\n"
+      [ -n "$next" ] && nav_block="$nav_block  <span><a href=\"$next\">Next</a> \></span>\n"
       nav_block="$nav_block  $DARK_TOGGLE\n"
       nav_block="$nav_block</div>"
 
@@ -282,7 +282,7 @@ add_navigation() {
 
     local nav_block="<div class=\"navigation\">\n"
     nav_block="$nav_block  <div class=\"breadcrumbs\">$breadcrumbs</div>\n"
-    [ -n "$prev" ] && nav_block="$nav_block  <span><a href=\"$prev\">Previous</a></span>\n"
+    [ -n "$prev" ] && nav_block="$nav_block  <span>\< <a href=\"$prev\">Previous</a></span>\n"
     nav_block="$nav_block  <span><a href=\"$TOC_FILE\">Contents</a></span>\n"
     nav_block="$nav_block  $DARK_TOGGLE\n"
     nav_block="$nav_block</div>"
