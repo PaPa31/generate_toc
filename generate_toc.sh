@@ -64,7 +64,9 @@ detect_css_file() {
 
 # Detect existing TOC file (nav.xhtml preferred over toc.ncx)
 detect_toc_source() {
-  if [ -f "nav.xhtml" ]; then
+  if [ -f "toc.xhtml" ]; then
+    echo "toc.xhtml"
+  elif [ -f "nav.xhtml" ]; then
     echo "nav.xhtml"
   elif [ -f "toc.ncx" ]; then
     echo "toc.ncx"
@@ -80,9 +82,11 @@ detect_cover_page() {
   elif [ -f "cover.xhtml" ]; then
     echo "cover.xhtml"
   elif [ -f "content.opf" ]; then
-    COVER_ID=$(grep -oP '(?<=<meta name="cover" content=")[^"]*' content.opf)
+    #COVER_ID=$(grep -oP '(?<=<meta name="cover" content=")[^"]*' content.opf)
+    COVER_ID=$(awk -F'<meta name="cover" content="|"' '/<meta name="cover"/ {print $2}' content.opf)
     if [ -n "$COVER_ID" ]; then
-      grep -oP '(?<=id=\"$COVER_ID\" href=\")[^"]*' content.opf
+      #grep -oP '(?<=id=\"$COVER_ID\" href=\")[^"]*' content.opf
+      awk -F'id="'$COVER_ID'" href="|"' '/id="'$COVER_ID'"/ {print $2}' content.opf
     fi
   fi
 }
@@ -92,9 +96,11 @@ detect_cover_page() {
 extract_ordered_files() {
   local toc_source="$1"
   if [ "$toc_source" = "nav.xhtml" ]; then
-    grep -oP '(?<=<a href=")[^"]*' "$toc_source" | grep -E '\.html|\.xhtml' | tr '\n' ' '
+    #grep -oP '(?<=<a href=")[^"]*' "$toc_source" | grep -E '\.html|\.xhtml' | tr '\n' ' '
+    awk -F'<a href="|"' '/<a href="/ {print $2}' "$toc_source" | grep -E '\.html|\.xhtml' | tr '\n' ' '
   elif [ "$toc_source" = "toc.ncx" ]; then
-    grep -oP '(?<=<content src=")[^"]*' "$toc_source" | grep -E '\.html|\.xhtml' | tr '\n' ' '
+    #grep -oP '(?<=<content src=")[^"]*' "$toc_source" | grep -E '\.html|\.xhtml' | tr '\n' ' '
+    awk -F'<content src="|"' '/<content src="/ {print $2}' "$toc_source" | grep -E '\.html|\.xhtml' | tr '\n' ' '
   else
     ls *.html *.xhtml 2>/dev/null | sort
   fi
@@ -117,7 +123,8 @@ generate_toc() {
       strip_anchor=$(echo "$file" | cut -d '#' -f 1)
 
       # Extract title from the HTML file.
-      title=$(grep -m1 -oP '(?<=<title>).*?(?=</title>)' "$strip_anchor")
+      #title=$(grep -m1 -oP '(?<=<title>).*?(?=</title>)' "$strip_anchor")
+      title=$(awk -F'<title>|</title>' '/<title>/ {print $2; exit}' "$strip_anchor")
       # If no title is found, use the file name.
       [ -z "$title" ] && title="$file"
 
