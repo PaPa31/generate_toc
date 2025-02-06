@@ -95,7 +95,9 @@ detect_cover_page() {
 # otherwise, list files alphabetically.
 extract_ordered_files() {
   local toc_source="$1"
-  if [ "$toc_source" = "nav.xhtml" ]; then
+  if [ "$toc_source" = "toc.xhtml" ]; then
+    awk -F'<a href="|"' '/<a href="/ {print $2}' "$toc_source" | grep -E '\.html|\.xhtml' | tr '\n' ' '
+  elif [ "$toc_source" = "nav.xhtml" ]; then
     #grep -oP '(?<=<a href=")[^"]*' "$toc_source" | grep -E '\.html|\.xhtml' | tr '\n' ' '
     awk -F'<a href="|"' '/<a href="/ {print $2}' "$toc_source" | grep -E '\.html|\.xhtml' | tr '\n' ' '
   elif [ "$toc_source" = "toc.ncx" ]; then
@@ -141,6 +143,7 @@ generate_toc() {
   done
 
   toc_content="$toc_content</ul>"
+  echo -e "$toc_content"
   TOC_CONTENT="$toc_content"
 }
 
@@ -239,9 +242,12 @@ add_navigation() {
   local gap="<div style=\"height: 50px;\"></div>"
   # Prepare the content to be inserted between </head> and <body>.
   local between="$LINK_STYLES$META\n</head>\n<body>\n$gap"
+  #local head_end="$LINK_STYLES$META\n</head>"
+  #local body_start="<body>\n$gap"
 
   for next in $files; do
-  # Remove any anchor from the file name.
+    echo "Previous: $prev   Current: $curr   Next: $next"
+    # Remove any anchor from the file name.
     local strip_anchor
     strip_anchor=$(echo "$next" | cut -d '#' -f 1)
 
@@ -250,12 +256,13 @@ add_navigation() {
     if [ -n "$curr" ] && [ "$strip_anchor" != $curr ]; then
       # Look up the title from the mapping file.
       local mapping_line
-      mapping_line=$(echo "$TITLE_MAP" | grep "^$curr|||")
+      mapping_line=$(echo -e "$TITLE_MAP" | grep "^$curr|||")
 
       # Extract title using '|||' as delimiter.
       local current_title
       current_title=$(echo "$mapping_line" | cut -d '|' -f 4)
       [ -z "$current_title" ] && current_title="$curr"
+      echo "Current Title: $current_title"
 
       # Generate breadcrumbs for the current file.
       local breadcrumbs
@@ -271,8 +278,27 @@ add_navigation() {
       nav_block="$nav_block  $DARK_TOGGLE\n"
       nav_block="$nav_block</div>"
 
+      #sed -i "s|</head>.*<body>|$between$nav_block$SCRIPT|" "$curr"
+      #sed -i 's|<body>|<body>\n|' "$curr"
       # Use sed to insert the navigation block between </head> and <body>.
-      sed -i -e ':a' -e 'N' -e '$!ba' -e "s|</head>.*<body>|$between$nav_block$SCRIPT|" "$curr"
+      #sed -i -e ':a' -e 'N' -e '$!ba' -e "s|</head>.*<body>|$between$nav_block$SCRIPT|" "$curr"
+      #sed ":a;N;$!ba;s/<\/head>[ \t\r\n]*<body>/$between$nav_block$SCRIPT/" "$curr" > temp_file && mv temp_file "$curr"
+      rep="${between}${nav_block}${SCRIPT}"
+      #sed ":a;N;\$!ba;s#</head>[ \t\r\n]*<body>#${rep}#" "$curr" > temp_file && mv temp_file "$curr"
+      sed -i ":a;N;\$!ba;s#</head>[ \t\r\n]*<body>#${rep}#" "$curr" && echo "</head>.*<body> Detected and replaced!" || echo "</head>.*<body> NOT REPLACED!!!"
+
+      #awk -v between="$between" -v nav_block="$nav_block" -v SCRIPT="$SCRIPT" '
+      #BEGIN { RS="</head>"; FS="<body>" }
+      #NR==1 { print $0 }
+      #NR==2 { print between nav_block SCRIPT $1 }
+      #' "$curr" > temp_file && mv temp_file "$curr"
+      #awk '
+      #BEGIN {ORS=""; RS=""} 
+      #{
+      #  gsub(/<\/head>.*<body>/, ENVIRON["between"] ENVIRON["nav_block"] ENVIRON["SCRIPT"])
+      #  print
+      #}' "$curr" > tmp && mv tmp "$curr"
+
 
       # move it inside the for loop to avoid blocking "Previous"
       # (when "page#anchor" right after "page" occurs) when turning pages
@@ -285,10 +311,11 @@ add_navigation() {
   # Handle the last file in the list.
   if [ -n "$curr" ]; then
     local mapping_line
-    mapping_line=$(echo "$TITLE_MAP" | grep "^$curr|||")
+    mapping_line=$(echo -e "$TITLE_MAP" | grep "^$curr|||")
     local current_title
     current_title=$(echo "$mapping_line" | cut -d '|' -f 4)
     [ -z "$current_title" ] && current_title="$curr"
+    echo "Current Title: $current_title"
 
     local breadcrumbs
     breadcrumbs=$(generate_breadcrumbs "$current_title")
@@ -301,7 +328,26 @@ add_navigation() {
     nav_block="$nav_block  $DARK_TOGGLE\n"
     nav_block="$nav_block</div>"
 
-    sed -i -e ':a' -e 'N' -e '$!ba' -e "s|</head>.*<body>|$between$nav_block$SCRIPT|" "$curr"
+    #sed -i "s|</head>.*<body>|$between$nav_block$SCRIPT|" "$curr"
+    #sed -i 's|<body>|<body>\n|' "$curr"
+    #sed -i -e ':a' -e 'N' -e '$!ba' -e "s|</head>.*<body>|$between$nav_block$SCRIPT|" "$curr"
+    #sed ':a;N;$!ba;s/<\/head>[ \t\r\n]*<body>/$between$nav_block$SCRIPT/' "$curr" > temp_file && mv temp_file "$curr"
+    # Concatenate the replacement text
+    rep="${between}${nav_block}${SCRIPT}"
+      sed -i ":a;N;\$!ba;s#</head>[ \t\r\n]*<body>#${rep}#" "$curr" && echo "</head>.*<body> Detected and replaced!" || echo "</head>.*<body> NOT REPLACED!!!"
+    #sed ":a;N;\$!ba;s#</head>[ \t\r\n]*<body>#${rep}#" "$curr" > temp_file && mv temp_file "$curr"
+
+    #awk -v between="$between" -v nav_block="$nav_block" -v SCRIPT="$SCRIPT" '
+    #BEGIN { RS="</head>"; FS="<body>" }
+    #NR==1 { print $0 }
+    #NR==2 { print between nav_block SCRIPT $1 }
+    #' "$curr" > temp_file && mv temp_file "$curr"
+    #awk '
+    #BEGIN {ORS=""; RS=""} 
+    #{
+    #  gsub(/<\/head>.*<body>/, ENVIRON["between"] ENVIRON["nav_block"] ENVIRON["SCRIPT"])
+    #  print
+    #}' "$curr" > tmp && mv tmp "$curr"
   fi
 }
 
