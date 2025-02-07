@@ -342,6 +342,19 @@ add_navigation() {
 create_styles_file() {
   cat > "$STYLES_FILE" <<EOF
 @charset "UTF-8";
+:root {
+  --generateTOC-border: #555;
+  --generateTOC-scrollbarHover: #777;
+}
+.dark {
+  --generateTOC-border: #aaa;
+  --generateTOC-scrollbarHover: #999;
+}
+html {
+  width: 100%;
+  overflow-x: hidden;
+  overflow-y: scroll;
+}
 body {
   background-color: #ffffff;
   color: #000000;
@@ -386,6 +399,20 @@ a[href]:hover {
 .dark {
   background-color: #000000;
   color: #ffffff;
+}
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background-color: var(--generateTOC-border);
+  border-radius: 5px;
+}
+::-webkit-scrollbar-corner {
+  background-color: transparent;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--generateTOC-scrollbarHover);
 }
 
 /* Remove automatic dark mode */
