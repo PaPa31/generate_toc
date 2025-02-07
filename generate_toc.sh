@@ -436,7 +436,7 @@ echo "TOC generated at: $TOC_FILE"
 
 # Add navigation blocks to all HTML files and measure the time taken.
 timer add_navigation "$HTML_FILES"
-log_debug "Elapsed Time (add_navigation): ${elapsed}"
+log_debug "Elapsed Time (add_navigation): ${elapsed}s"
 echo "Navigation added to HTML files."
 
 # Calculate and log the total elapsed execution time.
