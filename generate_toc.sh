@@ -141,7 +141,12 @@ generate_toc() {
   done
 
   toc_content="$toc_content</ul>"
-  echo "$toc_content"
+  echo "TITLE_MAP:"
+  echo $TITLE_MAP
+  echo
+  echo $TITLE_MAP
+  echo $TITLE_MAP > map
+  echo "TOC_CONTENT: $toc_content"
   TOC_CONTENT="$toc_content"
 }
 
@@ -237,7 +242,6 @@ add_navigation() {
   local files="$1"
   local prev=""
   local curr=""
-  local strip_anchor=""
   local gap="<div style=\"height: 50px;\"></div>"
   # Prepare the content to be inserted between </head> and <body>.
   local between="$LINK_STYLES$META\n</head>\n<body>\n$gap"
@@ -246,15 +250,17 @@ add_navigation() {
   local rep_bad="</head>.*<body> NOT REPLACED!!!   :--------------------->"
 
   for next in $files; do
+    echo "Previous: $prev   Current: $curr   Next: $next"
     # Remove any anchor from the file name.
-    strip_anchor=$(echo "$next" | cut -d '#' -f 1)
+    local strip_anchor=$(echo "$next" | cut -d '#' -f 1)
 
     # Ignore "page#anchor" right after "page" as
     # this pair will block page turning when clicking "Next".
     if [ -n "$curr" ] && [ "$strip_anchor" != $curr ]; then
       # Look up the title from the mapping file.
-      local mapping_line=$(echo -en "$TITLE_MAP" | grep "^$curr|||")
-      echo "mapping line: $mapping_line"
+      echo "Curr: $curr"
+      local mapping_line=$(echo -e "$TITLE_MAP" | grep "^$curr|||")
+      echo "Mapping Line: $mapping_line"
 
       # Extract title using '|||' as delimiter.
       local current_title=$(echo "$mapping_line" | cut -d '|' -f 4)
@@ -288,7 +294,8 @@ add_navigation() {
 
   # Handle the last file in the list.
   if [ -n "$curr" ]; then
-    local mapping_line=$(echo -en "$TITLE_MAP" | grep "^$curr|||")
+    echo "Previous: $prev   Current: $curr"
+    local mapping_line=$(echo -e "$TITLE_MAP" | grep "^$curr|||")
     echo "mapping line: $mapping_line"
 
     local current_title=$(echo "$mapping_line" | cut -d '|' -f 4)
