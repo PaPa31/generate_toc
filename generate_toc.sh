@@ -158,8 +158,8 @@ generate_toc() {
   # Debug output: print the TITLE_MAP
   echo "TITLE_MAP:"
   printf "%b" "$TITLE_MAP"
-  echo
-  printf "%b" "$TITLE_MAP" | od -c
+  #echo
+  #printf "%b" "$TITLE_MAP" | od -c
 
   # Write the TITLE_MAP to the file "map" (again converting escape sequences).
   printf "%b" "$TITLE_MAP" > map
@@ -268,13 +268,13 @@ add_navigation() {
 
   # Loop over each file in the list.
   for next in $files; do
-    echo "Previous: $prev   Current: $curr   Next: $next"
+    #echo "Previous: $prev   Current: $curr   Next: $next"
     # Remove any fragment (anchor) from the filename.
     local strip_anchor=$(echo "$next" | cut -d '#' -f 1)
 
     # Only process if there is a current file and it's different from the next file.
     if [ -n "$curr" ] && [ "$strip_anchor" != "$curr" ]; then
-      echo "Curr: $curr"
+      #echo "Curr: $curr"
       # Lookup the title mapping for the current file.
       local mapping_line=$(printf "%b" "$TITLE_MAP" | grep "^$curr|||")
       echo "Mapping Line: $mapping_line"
@@ -282,7 +282,7 @@ add_navigation() {
       # Extract the title using the "|||" delimiter.
       local current_title=$(echo "$mapping_line" | cut -d '|' -f 4)
       [ -z "$current_title" ] && current_title="$curr"
-      echo "Current Title: $current_title"
+      #echo "Current Title: $current_title"
 
       # Generate breadcrumbs for the current page.
       local breadcrumbs=$(generate_breadcrumbs "$current_title")
@@ -312,13 +312,13 @@ add_navigation() {
 
   # Process the final file in the list.
   if [ -n "$curr" ]; then
-    echo "Previous: $prev   Current: $curr"
+    #echo "Previous: $prev   Current: $curr"
     local mapping_line=$(printf "%b" "$TITLE_MAP" | grep "^$curr|||")
     echo "mapping line: $mapping_line"
 
     local current_title=$(echo "$mapping_line" | cut -d '|' -f 4)
     [ -z "$current_title" ] && current_title="$curr"
-    echo "Current Title: $current_title"
+    #echo "Current Title: $current_title"
 
     local breadcrumbs=$(generate_breadcrumbs "$current_title")
 
