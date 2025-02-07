@@ -112,12 +112,11 @@ extract_ordered_files() {
 generate_toc() {
   local files="$1"
   local toc_content="<ul>"
+  local strip_anchor=""
+  local title=""
 
   # Loop over each file to build TOC and mapping.
   for file in $files; do
-    local strip_anchor
-    local title
-
     # Check for a toc file that hasn't been created yet.
     # Otherwise, grep will return an error: _toc.html: No such file or directory.
     if [ "$file" != "$TOC_FILE" ]; then
@@ -125,7 +124,6 @@ generate_toc() {
       strip_anchor=$(echo "$file" | cut -d '#' -f 1)
 
       # Extract title from the HTML file.
-      #title=$(grep -m1 -oP '(?<=<title>).*?(?=</title>)' "$strip_anchor")
       title=$(awk -F'<title>|</title>' '/<title>/ {print $2; exit}' "$strip_anchor")
       # If no title is found, use the file name.
       [ -z "$title" ] && title="$file"
@@ -133,7 +131,7 @@ generate_toc() {
     else
       # For the TOC file itself, use a default title.
       title="Table of Contents"
-      strip_anchor="$TOC_FILE"
+      #local strip_anchor="$TOC_FILE"
     fi
 
     # Append the mapping: file<delimiter>title
@@ -239,6 +237,7 @@ add_navigation() {
   local files="$1"
   local prev=""
   local curr=""
+  local strip_anchor=""
   local gap="<div style=\"height: 50px;\"></div>"
   # Prepare the content to be inserted between </head> and <body>.
   local between="$LINK_STYLES$META\n</head>\n<body>\n$gap"
@@ -248,30 +247,25 @@ add_navigation() {
 
   for next in $files; do
     # Remove any anchor from the file name.
-    local strip_anchor
     strip_anchor=$(echo "$next" | cut -d '#' -f 1)
 
     # Ignore "page#anchor" right after "page" as
     # this pair will block page turning when clicking "Next".
     if [ -n "$curr" ] && [ "$strip_anchor" != $curr ]; then
       # Look up the title from the mapping file.
-      local mapping_line
-      mapping_line=$(echo -en "$TITLE_MAP" | grep "^$curr|||")
+      local mapping_line=$(echo -en "$TITLE_MAP" | grep "^$curr|||")
       echo "mapping line: $mapping_line"
 
       # Extract title using '|||' as delimiter.
-      local current_title
-      current_title=$(echo "$mapping_line" | cut -d '|' -f 4)
+      local current_title=$(echo "$mapping_line" | cut -d '|' -f 4)
       [ -z "$current_title" ] && current_title="$curr"
       echo "Current Title: $current_title"
 
       # Generate breadcrumbs for the current file.
-      local breadcrumbs
-      breadcrumbs=$(generate_breadcrumbs "$current_title")
+      local breadcrumbs=$(generate_breadcrumbs "$current_title")
 
       # Build navigation block HTML including breadcrumbs and navigation links.
-      local nav_block
-      nav_block="<div class=\"navigation\">\n"
+      local nav_block="<div class=\"navigation\">\n"
       nav_block="$nav_block  <div class=\"breadcrumbs\">$breadcrumbs</div>\n"
       [ -n "$prev" ] && nav_block="$nav_block  <span>\< <a href=\"$prev\">Previous</a></span>\n"
       nav_block="$nav_block  <span><a href=\"$TOC_FILE\">Contents</a></span>\n"
@@ -279,8 +273,7 @@ add_navigation() {
       nav_block="$nav_block  $DARK_TOGGLE\n"
       nav_block="$nav_block</div>"
 
-      local rep
-      rep="${between}${nav_block}${SCRIPT}"
+      local rep="${between}${nav_block}${SCRIPT}"
       # Optionally remove newlines if they are not desired
       #rep=$(printf '%s' "$rep" | tr -d '\n')
       sed -i -e ":a;N;\$!ba;s@</head>[ \t\r\n]*<body>@${rep}@g" "$curr"
@@ -295,28 +288,23 @@ add_navigation() {
 
   # Handle the last file in the list.
   if [ -n "$curr" ]; then
-    local mapping_line
-    mapping_line=$(echo -en "$TITLE_MAP" | grep "^$curr|||")
+    local mapping_line=$(echo -en "$TITLE_MAP" | grep "^$curr|||")
     echo "mapping line: $mapping_line"
 
-    local current_title
-    current_title=$(echo "$mapping_line" | cut -d '|' -f 4)
+    local current_title=$(echo "$mapping_line" | cut -d '|' -f 4)
     [ -z "$current_title" ] && current_title="$curr"
     echo "Current Title: $current_title"
 
-    local breadcrumbs
-    breadcrumbs=$(generate_breadcrumbs "$current_title")
+    local breadcrumbs=$(generate_breadcrumbs "$current_title")
 
-    local nav_block
-    nav_block="<div class=\"navigation\">\n"
+    local nav_block="<div class=\"navigation\">\n"
     nav_block="$nav_block  <div class=\"breadcrumbs\">$breadcrumbs</div>\n"
     [ -n "$prev" ] && nav_block="$nav_block  <span>\< <a href=\"$prev\">Previous</a></span>\n"
     nav_block="$nav_block  <span><a href=\"$TOC_FILE\">Contents</a></span>\n"
     nav_block="$nav_block  $DARK_TOGGLE\n"
     nav_block="$nav_block</div>"
 
-    local rep
-    rep="${between}${nav_block}${SCRIPT}"
+    local rep="${between}${nav_block}${SCRIPT}"
     #rep=$(printf '%s' "$rep" | tr -d '\n')
     sed -i -e ":a;N;\$!ba;s@</head>[ \t\r\n]*<body>@${rep}@g" "$curr"
   fi
