@@ -230,12 +230,12 @@ generate_breadcrumbs() {
 
   # Add a Home link if defined.
   if [ -n "$BREADCRUMB_HOME" ]; then
-    breadcrumbs="<a href=\"$BREADCRUMB_HOME\">Home</a> &gt; "
+    breadcrumbs="<a href=\"$BREADCRUMB_HOME\">Home</a> \\&gt; "
   fi
 
   # Add a Book link if defined.
   if [ -n "$BREADCRUMB_BOOK" ]; then
-    breadcrumbs="${breadcrumbs}<a href=\"$BREADCRUMB_BOOK\">Book</a> &gt; "
+    breadcrumbs="${breadcrumbs}<a href=\"$BREADCRUMB_BOOK\">Book</a> \\&gt; "
   fi
 
   # Append the current page title (not a link).
@@ -286,9 +286,9 @@ add_navigation() {
       # Build the navigation HTML block.
       local nav_block="<div class=\"navigation\">\n"
       nav_block="${nav_block}  <div class=\"breadcrumbs\">$breadcrumbs</div>\n"
-      [ -n "$prev" ] && nav_block="${nav_block}  <span>&lt; <a href=\"$prev\">Previous</a></span>\n"
+      [ -n "$prev" ] && nav_block="${nav_block}  <span>\\&lt; <a href=\"$prev\">Previous</a></span>\n"
       nav_block="${nav_block}  <span><a href=\"$TOC_FILE\">Contents</a></span>\n"
-      [ -n "$next" ] && nav_block="${nav_block}  <span><a href=\"$next\">Next</a> &gt;</span>\n"
+      [ -n "$next" ] && nav_block="${nav_block}  <span><a href=\"$next\">Next</a> \\&gt;</span>\n"
       nav_block="${nav_block}  $DARK_TOGGLE\n"
       nav_block="${nav_block}</div>"
 
@@ -320,7 +320,7 @@ add_navigation() {
 
     local nav_block="<div class=\"navigation\">\n"
     nav_block="${nav_block}  <div class=\"breadcrumbs\">$breadcrumbs</div>\n"
-    [ -n "$prev" ] && nav_block="${nav_block}  <span>&lt; <a href=\"$prev\">Previous</a></span>\n"
+    [ -n "$prev" ] && nav_block="${nav_block}  <span>\\&lt; <a href=\"$prev\">Previous</a></span>\n"
     nav_block="${nav_block}  <span><a href=\"$TOC_FILE\">Contents</a></span>\n"
     nav_block="${nav_block}  $DARK_TOGGLE\n"
     nav_block="${nav_block}</div>"
