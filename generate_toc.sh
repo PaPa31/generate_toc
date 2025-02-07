@@ -143,7 +143,7 @@ generate_toc() {
   done
 
   toc_content="$toc_content</ul>"
-  echo -e "$toc_content"
+  echo "$toc_content"
   TOC_CONTENT="$toc_content"
 }
 
@@ -246,7 +246,6 @@ add_navigation() {
   local rep_good="<-----------------:  </head>.*<body> Found and replaced!"
   local rep_bad="</head>.*<body> NOT REPLACED!!!   :--------------------->"
 
-
   for next in $files; do
     # Remove any anchor from the file name.
     local strip_anchor
@@ -257,7 +256,8 @@ add_navigation() {
     if [ -n "$curr" ] && [ "$strip_anchor" != $curr ]; then
       # Look up the title from the mapping file.
       local mapping_line
-      mapping_line=$(echo -e "$TITLE_MAP" | grep "^$curr|||")
+      mapping_line=$(echo -en "$TITLE_MAP" | grep "^$curr|||")
+      echo "mapping line: $mapping_line"
 
       # Extract title using '|||' as delimiter.
       local current_title
@@ -281,7 +281,9 @@ add_navigation() {
 
       local rep
       rep="${between}${nav_block}${SCRIPT}"
-      sed -i ":a;N;\$!ba;s#</head>[ \t\r\n]*<body>#${rep}#" "$curr" && echo "$rep_good" || echo "$rep_bad"
+      # Optionally remove newlines if they are not desired
+      #rep=$(printf '%s' "$rep" | tr -d '\n')
+      sed -i -e ":a;N;\$!ba;s@</head>[ \t\r\n]*<body>@${rep}@g" "$curr"
 
       # move it inside the for loop to avoid blocking "Previous"
       # (when "page#anchor" right after "page" occurs) when turning pages
@@ -294,7 +296,9 @@ add_navigation() {
   # Handle the last file in the list.
   if [ -n "$curr" ]; then
     local mapping_line
-    mapping_line=$(echo -e "$TITLE_MAP" | grep "^$curr|||")
+    mapping_line=$(echo -en "$TITLE_MAP" | grep "^$curr|||")
+    echo "mapping line: $mapping_line"
+
     local current_title
     current_title=$(echo "$mapping_line" | cut -d '|' -f 4)
     [ -z "$current_title" ] && current_title="$curr"
@@ -313,7 +317,8 @@ add_navigation() {
 
     local rep
     rep="${between}${nav_block}${SCRIPT}"
-    sed -i ":a;N;\$!ba;s#</head>[ \t\r\n]*<body>#${rep}#" "$curr" && echo "$rep_good" || echo "$rep_bad"
+    #rep=$(printf '%s' "$rep" | tr -d '\n')
+    sed -i -e ":a;N;\$!ba;s@</head>[ \t\r\n]*<body>@${rep}@g" "$curr"
   fi
 }
 
