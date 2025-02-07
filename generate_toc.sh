@@ -118,20 +118,22 @@ extract_ordered_files() {
 # TOC and Navigation Generation
 #####################################
 
-# Generate TOC content and build the TITLE_MAP.
+# Generate TOC content and build the TITLE_MAP with pretty formatting.
 generate_toc() {
   local files="$1"
-  local toc_content="<ul>"
+  # Start the unordered list with a newline.
+  # Note: The string is built normally; later we convert it so the "\n" become actual newlines.
+  local toc_content="<ul>\n"
   local strip_anchor=""
   local title=""
 
-  # Process each file in the list.
+  # Loop over each file to build TOC content and mapping.
   for file in $files; do
     # Skip the TOC file to prevent self-inclusion.
     if [ "$file" != "$TOC_FILE" ]; then
       # Remove any anchor (fragment) from the file name.
       strip_anchor=$(echo "$file" | cut -d '#' -f 1)
-      # Extract the title from the HTML file (first occurrence).
+      # Extract the title from the HTML file (first occurrence of <title> tag).
       title=$(awk -F'<title>|</title>' '/<title>/ {print $2; exit}' "$strip_anchor")
       # If no title is found, default to the file name.
       [ -z "$title" ] && title="$file"
@@ -140,29 +142,31 @@ generate_toc() {
       title="Table of Contents"
     fi
 
-    # Append the file and its title to TITLE_MAP.
-    # The "\n" is an escape sequence; later using printf "%b" will convert it to an actual newline.
+    # Append a mapping line (using literal "\n" which will be converted later).
     TITLE_MAP="${TITLE_MAP}${file}|||${title}\n"
 
-    # Add an HTML list item for this file.
-    toc_content="${toc_content}<li><a href='$file'>$title</a></li>"
+    # Append the formatted list item with indentations and newlines.
+    toc_content="${toc_content}  <li>\n    <a href='$file'>$title</a>\n  </li>\n"
   done
 
   # Close the unordered list.
   toc_content="${toc_content}</ul>"
 
-  # Debug output: print the TITLE_MAP and its hexdump.
+  # Convert the TOC string: change literal "\n" sequences into actual newlines.
+  TOC_CONTENT=$(printf "%b" "$toc_content")
+
+  # Debug output: print the TITLE_MAP
   echo "TITLE_MAP:"
   printf "%b" "$TITLE_MAP"
   echo
-  printf "%b" "$TITLE_MAP" | hexdump -C
-  # Write the processed TITLE_MAP to the file "map".
-  # Using printf "%b" converts escape sequences into actual characters.
+  printf "%b" "$TITLE_MAP" | od -c
+
+  # Write the TITLE_MAP to the file "map" (again converting escape sequences).
   printf "%b" "$TITLE_MAP" > map
 
-  echo "TOC_CONTENT: $toc_content"
-  # Store the TOC content for later use.
-  TOC_CONTENT="$toc_content"
+  # Debug output: show the final TOC_CONTENT.
+  echo "TOC_CONTENT:"
+  printf "%b" "$toc_content"
 }
 
 # Create the JavaScript file that handles dark mode toggling.
