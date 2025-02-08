@@ -71,7 +71,7 @@ detect_css_file() {
 
 # Detect a TOC source file. This function checks for commonly used filenames.
 detect_toc_source() {
-  if [ -f "toc.xhtml" ]; then
+  if [ -f "toc01.html" ]; then
     echo "toc.xhtml"
   elif [ -f "nav.xhtml" ]; then
     echo "nav.xhtml"
@@ -103,7 +103,7 @@ detect_cover_page() {
 # otherwise, list all HTML files alphabetically.
 extract_ordered_files() {
   local toc_source="$1"
-  if [ "$toc_source" = "toc.xhtml" ]; then
+  if [ "$toc_source" = "toc01.html" ]; then
     sed -n 's/.*<a href="\([^"]*\)".*/\1/p' "$toc_source" | cut -d '#' -f 1 | grep -E '\.html|\.xhtml' | tr '\n' ' '
   elif [ "$toc_source" = "nav.xhtml" ]; then
     awk -F'<a href="|"' '/<a href="/ {print $2}' "$toc_source" | grep -E '\.html|\.xhtml' | tr '\n' ' '
@@ -226,17 +226,17 @@ add_navigation() {
   # A gap div to create vertical spacing for the navigation bar.
   local gap="<div style=\"height: 70px;\"></div>"
   # The content to insert between </head> and <body> (includes CSS link, meta tag, and gap).
-  local between="  $LINK_STYLES\n  $META\n</head>\n<body>\n  $gap"
+  local between="$LINK_STYLES$META</head><body>$gap"
 
   # Loop over each file in the list.
   for next in $files; do
-    #echo "Previous: $prev   Current: $curr   Next: $next"
+    echo "Previous: $prev   Current: $curr   Next: $next"
     # Remove any fragment (anchor) from the filename.
     local strip_anchor=$(echo "$next" | cut -d '#' -f 1)
 
     # Only process if there is a current file and it's different from the next file.
     if [ -n "$curr" ] && [ "$strip_anchor" != "$curr" ]; then
-      #echo "Curr: $curr"
+      echo "Curr: $curr"
       # Lookup the title mapping for the current file.
       local mapping_line=$(printf "%b" "$TITLE_MAP" | grep "^$curr|||")
       echo "Mapping Line: $mapping_line"
@@ -244,7 +244,7 @@ add_navigation() {
       # Extract the title using the "|||" delimiter.
       local current_title=$(echo "$mapping_line" | cut -d '|' -f 4)
       [ -z "$current_title" ] && current_title="$curr"
-      #echo "Current Title: $current_title"
+      echo "Current Title: $current_title"
 
       # Generate breadcrumbs for the current page.
       local breadcrumbs=$(generate_breadcrumbs "$current_title")
@@ -259,7 +259,7 @@ add_navigation() {
       nav_block="${nav_block}  </div>"
 
       # Combine the head insertion block with the navigation block and the JavaScript tag.
-      local rep="${between}\n  ${nav_block}\n  ${SCRIPT}"
+      local rep="${between}${nav_block}${SCRIPT}"
       # Use sed to search for the pattern </head> followed by any whitespace and <body>
       # and replace it with our custom navigation block.
       sed -i -e ":a;N;\$!ba;s@</head>[ \t\r\n]*<body>@${rep}@g" "$curr"
@@ -274,13 +274,13 @@ add_navigation() {
 
   # Process the final file in the list.
   if [ -n "$curr" ]; then
-    #echo "Previous: $prev   Current: $curr"
+    echo "Previous: $prev   Current: $curr"
     local mapping_line=$(printf "%b" "$TITLE_MAP" | grep "^$curr|||")
     echo "mapping line: $mapping_line"
 
     local current_title=$(echo "$mapping_line" | cut -d '|' -f 4)
     [ -z "$current_title" ] && current_title="$curr"
-    #echo "Current Title: $current_title"
+    echo "Current Title: $current_title"
 
     local breadcrumbs=$(generate_breadcrumbs "$current_title")
 
@@ -291,7 +291,7 @@ add_navigation() {
     nav_block="${nav_block}    $DARK_TOGGLE\n"
     nav_block="${nav_block}  </div>"
 
-    local rep="${between}\n  ${nav_block}\n  ${SCRIPT}"
+    local rep="${between}${nav_block}${SCRIPT}"
     sed -i -e ":a;N;\$!ba;s@</head>[ \t\r\n]*<body>@${rep}@g" "$curr"
   fi
 }
@@ -452,8 +452,8 @@ HTML_FILES=$(extract_ordered_files "$TOC_SOURCE")
 HTML_FILES="$TOC_FILE $HTML_FILES"
 
 # If a cover page exists, add it to the beginning of the file list.
-COVER_PAGE=$(detect_cover_page)
-[ -n "$COVER_PAGE" ] && HTML_FILES="$COVER_PAGE $HTML_FILES"
+#COVER_PAGE=$(detect_cover_page)
+#[ -n "$COVER_PAGE" ] && HTML_FILES="$COVER_PAGE $HTML_FILES"
 
 # Generate the TOC content and build the TITLE_MAP.
 generate_toc "$HTML_FILES"
