@@ -104,7 +104,7 @@ detect_cover_page() {
 extract_ordered_files() {
   local toc_source="$1"
   if [ "$toc_source" = "toc.xhtml" ]; then
-    awk -F'<a href="|"' '/<a href="/ {print $2}' "$toc_source" | grep -E '\.html|\.xhtml' | tr '\n' ' '
+    sed -n 's/.*<a href="\([^"]*\)".*/\1/p' "$toc_source" | cut -d '#' -f 1 | grep -E '\.html|\.xhtml' | tr '\n' ' '
   elif [ "$toc_source" = "nav.xhtml" ]; then
     awk -F'<a href="|"' '/<a href="/ {print $2}' "$toc_source" | grep -E '\.html|\.xhtml' | tr '\n' ' '
   elif [ "$toc_source" = "toc.ncx" ]; then
