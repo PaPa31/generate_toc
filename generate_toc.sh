@@ -169,44 +169,6 @@ generate_toc() {
   printf "%b" "$toc_content"
 }
 
-# Create the JavaScript file that handles dark mode toggling.
-create_js_file() {
-cat > "$JS_FILE" << 'EOF'
-/* Get references to the document body and the dark mode toggle button */
-var bodyEl = document.body;
-var darkButton = document.getElementById("dark-toggle");
-
-// Retrieve stored theme preference from local storage.
-var savedTheme = localStorage.getItem("generateTOCdarkMode");
-
-if (savedTheme === "dark") {
-  bodyEl.classList.add("dark");
-} else if (savedTheme === "light") {
-  bodyEl.classList.add("light");
-} else if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
-  // If no preference is stored and the system prefers dark mode, enable dark mode.
-  bodyEl.classList.add("dark");
-}
-
-// Add a click event listener to the toggle button to switch themes.
-darkButton.addEventListener("click", function () {
-  toggleDarkMode();
-});
-
-function toggleDarkMode() {
-  if (bodyEl.classList.contains("dark")) {
-    bodyEl.classList.remove("dark");
-    bodyEl.classList.add("light");
-    localStorage.setItem("generateTOCdarkMode", "light");
-  } else {
-    bodyEl.classList.remove("light");
-    bodyEl.classList.add("dark");
-    localStorage.setItem("generateTOCdarkMode", "dark");
-  }
-}
-EOF
-}
-
 # Create the TOC HTML file using the generated TOC content.
 create_toc_file() {
   local css_file="$1"
@@ -335,10 +297,48 @@ add_navigation() {
 }
 
 #####################################
-# Styles File Creation
+# CSS and JS Files Creation
 #####################################
 
-# Create the CSS file with styling for the TOC and navigation.
+# Create the JavaScript file that handles dark mode toggling.
+create_js_file() {
+cat > "$JS_FILE" << 'EOF'
+/* Get references to the document body and the dark mode toggle button */
+var bodyEl = document.body;
+var darkButton = document.getElementById("dark-toggle");
+
+// Retrieve stored theme preference from local storage.
+var savedTheme = localStorage.getItem("generateTOCdarkMode");
+
+if (savedTheme === "dark") {
+  bodyEl.classList.add("dark");
+} else if (savedTheme === "light") {
+  bodyEl.classList.add("light");
+} else if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
+  // If no preference is stored and the system prefers dark mode, enable dark mode.
+  bodyEl.classList.add("dark");
+}
+
+// Add a click event listener to the toggle button to switch themes.
+darkButton.addEventListener("click", function () {
+  toggleDarkMode();
+});
+
+function toggleDarkMode() {
+  if (bodyEl.classList.contains("dark")) {
+    bodyEl.classList.remove("dark");
+    bodyEl.classList.add("light");
+    localStorage.setItem("generateTOCdarkMode", "light");
+  } else {
+    bodyEl.classList.remove("light");
+    bodyEl.classList.add("dark");
+    localStorage.setItem("generateTOCdarkMode", "dark");
+  }
+}
+EOF
+}
+
+# Create the CSS file with styling for the TOC, navigation and pages.
 create_styles_file() {
   cat > "$STYLES_FILE" <<EOF
 @charset "UTF-8";
