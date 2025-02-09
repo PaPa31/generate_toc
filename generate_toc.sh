@@ -266,7 +266,7 @@ add_navigation() {
       nav_block="${nav_block}</div>"
 
       # Combine the head insertion block with the navigation block and the JavaScript tag.
-      local rep="${nav_block}${SCRIPT}"
+      local rep="${gap}${nav_block}${SCRIPT}"
       #local rep_safe=$(printf '%b' "$rep")
       # Use sed to search for the pattern </head> followed by any whitespace and <body>
       # and replace it with our custom navigation block.
@@ -304,8 +304,8 @@ add_navigation() {
     nav_block="${nav_block}<span><a href=\"$TOC_FILE\">Contents</a></span>"
     nav_block="${nav_block}$DARK_TOGGLE"
     nav_block="${nav_block}</div>"
-    
-    local rep="${nav_block}${SCRIPT}"
+
+    local rep="${gap}${nav_block}${SCRIPT}"
     #local rep_safe=$(printf '%b' "$rep")
     # Escape '&' in the replacement variable for sed
     #rep_safe=$(printf '%s\n' "$rep" | sed 's/[&]/\\&/g')
@@ -354,37 +354,74 @@ function toggleDarkMode() {
   }
 }
 
-function debounceRAF(func) {
-  let ticking = false;
+function debounce(wait, func, immediate) {
+  var timeout;
   return function () {
-    if (!ticking) {
-      requestAnimationFrame(() => {
-        func();
-        ticking = false;
-      });
-      ticking = true;
+    var context = this,
+      args = arguments;
+    var later = function () {
+      timeout = null;
+      if (!immediate) {
+        func.apply(context, args);
+      }
+    };
+    var callNow = immediate && !timeout;
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait || 200);
+    if (callNow) {
+      func.apply(context, args);
     }
   };
 }
 
-let lastScrollTop = 0
-const nav = document.querySelector('.navigation')
+// Ensure requestAnimationFrame works in old browsers
+window.requestAnimationFrame =
+  window.requestAnimationFrame ||
+  window.webkitRequestAnimationFrame ||
+  window.mozRequestAnimationFrame ||
+  window.oRequestAnimationFrame ||
+  window.msRequestAnimationFrame ||
+  function (callback) {
+    return setTimeout(callback, 16); // 60 FPS fallback
+  };
+
+var lastScrollTop = 0;
+var nav = document.querySelector('.navigation');
 
 function scroll() {
-  let scrollTop = window.scrollY || document.documentElement.scrollTop;
-  if (scrollTop > lastScrollTop) {
-    nav.classList.add('hidden');
-  } else {
-    nav.classList.remove('hidden');
-  }
-  lastScrollTop = scrollTop;
+  var scrollTop =
+    document.documentElement.scrollTop || document.body.scrollTop || 0;
 
-  // Always show after 1.5s of no scrolling
-  clearTimeout(nav.timeout);
-  nav.timeout = setTimeout(() => nav.classList.remove('hidden'), 1500);
+  if (scrollTop > lastScrollTop) {
+    // Scrolling down, hide navbar
+    if (nav.classList) {
+      nav.classList.add('hidden');
+    } else {
+      nav.className += ' hidden'; // Old browser fallback
+    }
+  } else {
+    // Scrolling up, show navbar
+    if (nav.classList) {
+      nav.classList.remove('hidden');
+    } else {
+      nav.className = nav.className.replace(/(?:^|\s)hidden(?!\S)/g, '');
+    }
+  }
+
+  lastScrollTop = scrollTop;
 }
 
-window.addEventListener('scroll', debounceRAF(scroll), false);
+// Use requestAnimationFrame for smooth performance
+function optimizedScroll() {
+  requestAnimationFrame(scroll);
+}
+
+// Attach debounced scroll event listener
+if (window.addEventListener) {
+  window.addEventListener('scroll', debounce(100, optimizedScroll, false), false);
+} else if (window.attachEvent) {
+  window.attachEvent('onscroll', debounce(100, optimizedScroll, false)); // IE8 fallback
+}
 EOF
 }
 
@@ -439,8 +476,15 @@ a[href]:hover {
   transition: top 0.3s ease-in-out;
 }
 .hidden {
-  top: -80px; /* Moves navigation out of view */
+  top: -80px;
 }
+/* Fallback for old browsers (if transition is unsupported) */
+@media screen and (-ms-high-contrast: active), (-ms-high-contrast: none) {
+  .hidden {
+    display: none;
+  }
+}
+
 .breadcrumbs {
   white-space: nowrap;
 }
