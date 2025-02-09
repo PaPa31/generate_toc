@@ -353,6 +353,45 @@ function toggleDarkMode() {
     localStorage.setItem("generateTOCdarkMode", "dark");
   }
 }
+
+function debounce(wait, func, immediate) {
+  var timeout;
+  return function counter() {
+    var context = this,
+      args = arguments;
+    var later = function () {
+      timeout = null;
+      if (!immediate) {
+        func.apply(context, args);
+      }
+    };
+    var callNow = immediate && !timeout;
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait || 200);
+    if (callNow) {
+      func.apply(context, args);
+    }
+  };
+};
+
+let lastScrollTop = 0
+const nav = document.querySelector('.navigation')
+
+function scroll() {
+  let scrollTop = window.scrollY || document.documentElement.scrollTop
+
+  if (scrollTop > lastScrollTop) {
+    // Scrolling down, hide navbar
+    nav.classList.add('hidden')
+  } else {
+    // Scrolling up, show navbar
+    nav.classList.remove('hidden')
+  }
+
+  lastScrollTop = scrollTop
+}
+
+window.addEventListener('scroll', debounce(100, scroll, false), false);
 EOF
 }
 
@@ -404,6 +443,10 @@ a[href]:hover {
   text-align: center;
   border-bottom: 1px solid #cccccc4d;
   background-color: inherit;
+  transition: top 0.3s ease-in-out;
+}
+.hidden {
+  top: -80px; /* Moves navigation out of view */
 }
 .breadcrumbs {
   white-space: nowrap;
