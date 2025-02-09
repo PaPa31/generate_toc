@@ -123,7 +123,7 @@ generate_toc() {
   local files="$1"
   # Start the unordered list with a newline.
   # Note: The string is built normally; later we convert it so the "\n" become actual newlines.
-  local toc_content="<ul>\n"
+  local toc_content="<ul>"
   local strip_anchor=""
   local title=""
 
@@ -143,14 +143,14 @@ generate_toc() {
     fi
 
     # Append a mapping line (using literal "\n" which will be converted later).
-    TITLE_MAP="${TITLE_MAP}${file}|||${title}\n"
+    TITLE_MAP="${TITLE_MAP}${file}|||${title}"
 
     # Append the formatted list item with indentations and newlines.
-    toc_content="${toc_content}    <li>\n      <a href='$file'>$title</a>\n    </li>\n"
+    toc_content="${toc_content}<li><a href='$file'>$title</a></li>"
   done
 
   # Close the unordered list.
-  toc_content="${toc_content}  </ul>\n"
+  toc_content="${toc_content}</ul>"
 
   # Convert the TOC string: change literal "\n" sequences into actual newlines.
   TOC_CONTENT=$(printf "%b" "$toc_content")
@@ -196,12 +196,12 @@ generate_breadcrumbs() {
 
   # Add a Home link if defined.
   if [ -n "$BREADCRUMB_HOME" ]; then
-    breadcrumbs="<a href=\"$BREADCRUMB_HOME\">Home</a> \\&gt; "
+    breadcrumbs="<a href=\"$BREADCRUMB_HOME\">Home</a>"
   fi
 
   # Add a Book link if defined.
   if [ -n "$BREADCRUMB_BOOK" ]; then
-    breadcrumbs="${breadcrumbs}<a href=\"$BREADCRUMB_BOOK\">Book</a> \\&gt; "
+    breadcrumbs="${breadcrumbs}<a href=\"$BREADCRUMB_BOOK\">Book</a>"
   fi
 
   # Append the current page title (not a link).
@@ -226,7 +226,7 @@ add_navigation() {
   # A gap div to create vertical spacing for the navigation bar.
   local gap="<div style=\"height: 70px;\"></div>"
   # The content to insert between </head> and <body> (includes CSS link, meta tag, and gap).
-  local between="$LINK_STYLES$META</head><body>$gap"
+  local between="$LINK_STYLES$META</head>"
 
   # Loop over each file in the list.
   for next in $files; do
@@ -250,19 +250,27 @@ add_navigation() {
       local breadcrumbs=$(generate_breadcrumbs "$current_title")
 
       # Build the navigation HTML block.
-      local nav_block="<div class=\"navigation\">\n"
-      nav_block="${nav_block}    <div class=\"breadcrumbs\">$breadcrumbs</div>\n"
-      [ -n "$prev" ] && nav_block="${nav_block}    <span>\\&lt; <a href=\"$prev\">Previous</a></span>\n"
-      nav_block="${nav_block}    <span><a href=\"$TOC_FILE\">Contents</a></span>\n"
-      [ -n "$next" ] && nav_block="${nav_block}    <span><a href=\"$next\">Next</a> \\&gt;</span>\n"
-      nav_block="${nav_block}    $DARK_TOGGLE\n"
-      nav_block="${nav_block}  </div>"
+      #local nav_block="<div class=\"navigation\">\n"
+      #nav_block="${nav_block}    <div class=\"breadcrumbs\">$breadcrumbs</div>\n"
+      #[ -n "$prev" ] && nav_block="${nav_block}    <span>\\&lt; <a href=\"$prev\">Previous</a></span>\n"
+      #nav_block="${nav_block}    <span><a href=\"$TOC_FILE\">Contents</a></span>\n"
+      #[ -n "$next" ] && nav_block="${nav_block}    <span><a href=\"$next\">Next</a> \\&gt;</span>\n"
+      #nav_block="${nav_block}    $DARK_TOGGLE\n"
+      #nav_block="${nav_block}  </div>"
+      local nav_block="<div class=\"navigation\">"
+      nav_block="${nav_block}<div class=\"breadcrumbs\">$breadcrumbs</div>"
+      [ -n "$prev" ] && nav_block="${nav_block}<span><a href=\"$prev\">Previous</a></span>"
+      nav_block="${nav_block}<span><a href=\"$TOC_FILE\">Contents</a></span>"
+      [ -n "$next" ] && nav_block="${nav_block}<span><a href=\"$next\">Next</a></span>"
+      nav_block="${nav_block}$DARK_TOGGLE"
+      nav_block="${nav_block}</div>"
 
       # Combine the head insertion block with the navigation block and the JavaScript tag.
-      local rep="${between}${nav_block}${SCRIPT}"
+      local rep="${nav_block}${SCRIPT}"
+      #local rep_safe=$(printf '%b' "$rep")
       # Use sed to search for the pattern </head> followed by any whitespace and <body>
       # and replace it with our custom navigation block.
-      sed -i -e ":a;N;\$!ba;s@</head>[ \t\r\n]*<body>@${rep}@g" "$curr"
+      sed -i -e ":a;N;\$!ba;s|</head>[ \t\r\n]*\(<body[^>]*>\)|${between}\1${rep}|g" "$curr"
 
       # Set the previous file to the current one for navigation purposes.
       prev="$curr"
@@ -284,15 +292,25 @@ add_navigation() {
 
     local breadcrumbs=$(generate_breadcrumbs "$current_title")
 
-    local nav_block="<div class=\"navigation\">\n"
-    nav_block="${nav_block}    <div class=\"breadcrumbs\">$breadcrumbs</div>\n"
-    [ -n "$prev" ] && nav_block="${nav_block}    <span>\\&lt; <a href=\"$prev\">Previous</a></span>\n"
-    nav_block="${nav_block}    <span><a href=\"$TOC_FILE\">Contents</a></span>\n"
-    nav_block="${nav_block}    $DARK_TOGGLE\n"
-    nav_block="${nav_block}  </div>"
-
-    local rep="${between}${nav_block}${SCRIPT}"
-    sed -i -e ":a;N;\$!ba;s@</head>[ \t\r\n]*<body>@${rep}@g" "$curr"
+    #local nav_block="<div class=\"navigation\">\n"
+    #nav_block="${nav_block}    <div class=\"breadcrumbs\">$breadcrumbs</div>\n"
+    #[ -n "$prev" ] && nav_block="${nav_block}    <span>\\&lt; <a href=\"$prev\">Previous</a></span>\n"
+    #nav_block="${nav_block}    <span><a href=\"$TOC_FILE\">Contents</a></span>\n"
+    #nav_block="${nav_block}    $DARK_TOGGLE\n"
+    #nav_block="${nav_block}  </div>"
+    local nav_block="<div class=\"navigation\">"
+    nav_block="${nav_block}<div class=\"breadcrumbs\">$breadcrumbs</div>"
+    [ -n "$prev" ] && nav_block="${nav_block}<span><a href=\"$prev\">Previous</a></span>"
+    nav_block="${nav_block}<span><a href=\"$TOC_FILE\">Contents</a></span>"
+    nav_block="${nav_block}$DARK_TOGGLE"
+    nav_block="${nav_block}</div>"
+    
+    local rep="${nav_block}${SCRIPT}"
+    #local rep_safe=$(printf '%b' "$rep")
+    # Escape '&' in the replacement variable for sed
+    #rep_safe=$(printf '%s\n' "$rep" | sed 's/[&]/\\&/g')
+    #sed -i -e ":a;N;\$!ba;s@</head>[ \t\r\n]*<body>@${rep}@g" "$curr"
+    sed -i -e ":a;N;\$!ba;s|</head>[ \t\r\n]*\(<body[^>]*>\)|${between}\1${rep}|g" "$curr"
   fi
 }
 
@@ -367,6 +385,9 @@ body > :not(.navigation) {
 ul {
   list-style-type: none;
   padding: 0;
+}
+a:not([href]) {
+  color: inherit;
 }
 a[href] {
   text-decoration: underline;
