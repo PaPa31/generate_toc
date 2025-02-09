@@ -354,44 +354,37 @@ function toggleDarkMode() {
   }
 }
 
-function debounce(wait, func, immediate) {
-  var timeout;
-  return function counter() {
-    var context = this,
-      args = arguments;
-    var later = function () {
-      timeout = null;
-      if (!immediate) {
-        func.apply(context, args);
-      }
-    };
-    var callNow = immediate && !timeout;
-    clearTimeout(timeout);
-    timeout = setTimeout(later, wait || 200);
-    if (callNow) {
-      func.apply(context, args);
+function debounceRAF(func) {
+  let ticking = false;
+  return function () {
+    if (!ticking) {
+      requestAnimationFrame(() => {
+        func();
+        ticking = false;
+      });
+      ticking = true;
     }
   };
-};
+}
 
 let lastScrollTop = 0
 const nav = document.querySelector('.navigation')
 
 function scroll() {
-  let scrollTop = window.scrollY || document.documentElement.scrollTop
-
+  let scrollTop = window.scrollY || document.documentElement.scrollTop;
   if (scrollTop > lastScrollTop) {
-    // Scrolling down, hide navbar
-    nav.classList.add('hidden')
+    nav.classList.add('hidden');
   } else {
-    // Scrolling up, show navbar
-    nav.classList.remove('hidden')
+    nav.classList.remove('hidden');
   }
+  lastScrollTop = scrollTop;
 
-  lastScrollTop = scrollTop
+  // Always show after 1.5s of no scrolling
+  clearTimeout(nav.timeout);
+  nav.timeout = setTimeout(() => nav.classList.remove('hidden'), 1500);
 }
 
-window.addEventListener('scroll', debounce(100, scroll, false), false);
+window.addEventListener('scroll', debounceRAF(scroll), false);
 EOF
 }
 
