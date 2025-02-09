@@ -196,12 +196,12 @@ generate_breadcrumbs() {
 
   # Add a Home link if defined.
   if [ -n "$BREADCRUMB_HOME" ]; then
-    breadcrumbs="<a href=\"$BREADCRUMB_HOME\">Home</a>"
+    breadcrumbs="<a href=\"$BREADCRUMB_HOME\">Home</a><span></span>"
   fi
 
   # Add a Book link if defined.
   if [ -n "$BREADCRUMB_BOOK" ]; then
-    breadcrumbs="${breadcrumbs}<a href=\"$BREADCRUMB_BOOK\">Book</a>"
+    breadcrumbs="${breadcrumbs}<a href=\"$BREADCRUMB_BOOK\">Book</a><span></span>"
   fi
 
   # Append the current page title (not a link).
@@ -250,24 +250,21 @@ add_navigation() {
       local breadcrumbs=$(generate_breadcrumbs "$current_title")
 
       # Build the navigation HTML block.
-      #local nav_block="<div class=\"navigation\">\n"
-      #nav_block="${nav_block}    <div class=\"breadcrumbs\">$breadcrumbs</div>\n"
-      #[ -n "$prev" ] && nav_block="${nav_block}    <span>\\&lt; <a href=\"$prev\">Previous</a></span>\n"
-      #nav_block="${nav_block}    <span><a href=\"$TOC_FILE\">Contents</a></span>\n"
-      #[ -n "$next" ] && nav_block="${nav_block}    <span><a href=\"$next\">Next</a> \\&gt;</span>\n"
-      #nav_block="${nav_block}    $DARK_TOGGLE\n"
-      #nav_block="${nav_block}  </div>"
       local nav_block="<div class=\"navigation\">"
       nav_block="${nav_block}<div class=\"breadcrumbs\">$breadcrumbs</div>"
-      [ -n "$prev" ] && nav_block="${nav_block}<span><a href=\"$prev\">Previous</a></span>"
+      nav_block="${nav_block}<div class=\"page-turning\">"
+      if [ -n "$prev" ]; then
+        nav_block="${nav_block}<span><a href=\"$prev\">Previous</a></span>"
+      else
+        nav_block="${nav_block}<span class=\"isDisabled\"><a href=\"#\" aria-disabled=\"true\">Previous</a></span>"
+      fi
       nav_block="${nav_block}<span><a href=\"$TOC_FILE\">Contents</a></span>"
       [ -n "$next" ] && nav_block="${nav_block}<span><a href=\"$next\">Next</a></span>"
-      nav_block="${nav_block}$DARK_TOGGLE"
+      nav_block="${nav_block}</div>$DARK_TOGGLE"
       nav_block="${nav_block}</div>"
 
       # Combine the head insertion block with the navigation block and the JavaScript tag.
       local rep="${gap}${nav_block}${SCRIPT}"
-      #local rep_safe=$(printf '%b' "$rep")
       # Use sed to search for the pattern </head> followed by any whitespace and <body>
       # and replace it with our custom navigation block.
       sed -i -e ":a;N;\$!ba;s|</head>[ \t\r\n]*\(<body[^>]*>\)|${between}\1${rep}|g" "$curr"
@@ -292,24 +289,16 @@ add_navigation() {
 
     local breadcrumbs=$(generate_breadcrumbs "$current_title")
 
-    #local nav_block="<div class=\"navigation\">\n"
-    #nav_block="${nav_block}    <div class=\"breadcrumbs\">$breadcrumbs</div>\n"
-    #[ -n "$prev" ] && nav_block="${nav_block}    <span>\\&lt; <a href=\"$prev\">Previous</a></span>\n"
-    #nav_block="${nav_block}    <span><a href=\"$TOC_FILE\">Contents</a></span>\n"
-    #nav_block="${nav_block}    $DARK_TOGGLE\n"
-    #nav_block="${nav_block}  </div>"
     local nav_block="<div class=\"navigation\">"
     nav_block="${nav_block}<div class=\"breadcrumbs\">$breadcrumbs</div>"
+    nav_block="${nav_block}<div class=\"page-turning\">"
     [ -n "$prev" ] && nav_block="${nav_block}<span><a href=\"$prev\">Previous</a></span>"
     nav_block="${nav_block}<span><a href=\"$TOC_FILE\">Contents</a></span>"
-    nav_block="${nav_block}$DARK_TOGGLE"
+    [ -n "$next" ] && nav_block="${nav_block}<span class=\"isDisabled\"><a href=\"#\" aria-disabled=\"true\">Next</a></span>"
+    nav_block="${nav_block}</div>$DARK_TOGGLE"
     nav_block="${nav_block}</div>"
 
     local rep="${gap}${nav_block}${SCRIPT}"
-    #local rep_safe=$(printf '%b' "$rep")
-    # Escape '&' in the replacement variable for sed
-    #rep_safe=$(printf '%s\n' "$rep" | sed 's/[&]/\\&/g')
-    #sed -i -e ":a;N;\$!ba;s@</head>[ \t\r\n]*<body>@${rep}@g" "$curr"
     sed -i -e ":a;N;\$!ba;s|</head>[ \t\r\n]*\(<body[^>]*>\)|${between}\1${rep}|g" "$curr"
   fi
 }
@@ -496,7 +485,6 @@ a[href]:hover {
   top: 0;
   left: 0;
   width: 100%;
-  padding: 10px;
   text-align: center;
   border-bottom: 1px solid var(--uni-border);
   background-color: var(--uni-background);
@@ -511,32 +499,43 @@ a[href]:hover {
     display: none;
   }
 }
-.navigation > span:before, .navigation > span:after {
-  content: " "
+.page-turning {
+  display: inline-block;
 }
-.navigation > span:nth-child(2):before {
-  content: "< "
+.page-turning > span:first-child:before {
+  content: "< ";
 }
-
-.navigation > span:nth-child(4):after {
-  content: " >"
+.page-turning > span:last-child:after {
+  content: " >";
+}
+.page-turning > span {
+  padding: 0 2px;
 }
 .breadcrumbs {
   white-space: nowrap;
+  padding: 8px 0 0 8px;
 }
-.breadcrumbs a:after {
+.breadcrumbs > span:not(:last-child):after {
   content: " > ";
+}
+.isDisabled {
+  opacity: 0.3;
+}
+a[aria-disabled="true"] {
   color: var(--uni-color);
+  display: inline-block;  /* For IE11/ MS Edge bug */
+  pointer-events: none;
+  text-decoration: line-through;
 }
 #dark-toggle {
-  position: fixed;
-  right: 10px;
   padding: 5px 10px;
   background-color: var(--uni-button-background);
   color: var(--uni-button-color);
   border: none;
   cursor: pointer;
   border-radius: 5px;
+  float: right;
+  margin: -3px 6px 6px;
 }
 ::-webkit-scrollbar {
   width: 10px;
