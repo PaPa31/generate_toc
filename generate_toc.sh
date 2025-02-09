@@ -143,7 +143,7 @@ generate_toc() {
     fi
 
     # Append a mapping line (using literal "\n" which will be converted later).
-    TITLE_MAP="${TITLE_MAP}${file}|||${title}"
+    TITLE_MAP="${TITLE_MAP}${file}|||${title}\n"
 
     # Append the formatted list item with indentations and newlines.
     toc_content="${toc_content}<li><a href='$file'>$title</a></li>"
