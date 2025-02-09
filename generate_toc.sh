@@ -430,12 +430,27 @@ create_styles_file() {
   cat > "$STYLES_FILE" <<EOF
 @charset "UTF-8";
 :root {
-  --generateTOC-border: #555555;
-  --generateTOC-scrollbarHover: #777777;
+  --uni-color: #000000;
+  --uni-background: #ffffff;
+  --uni-scrollbar: #555555;
+  --uni-scrollbarHover: #777777;
+  --uni-link: #0000ee;
+  --uni-link-visited: #551a8b;
+  --uni-link-active: #ff0000;
+  --uni-border: #7777774d;
+  --uni-button-color: #c40022;
+  --uni-button-background: #444444;
 }
 .dark {
-  --generateTOC-border: #aaaaaa;
-  --generateTOC-scrollbarHover: #999999;
+  --uni-color: #ffffff;
+  --uni-background: #000000;
+  --uni-scrollbar: #aaaaaa;
+  --uni-scrollbarHover: #999999;
+  --uni-link: #abffb4;
+  --uni-link-visited: #538a5a;
+  --uni-border: #cccccc4d;
+  --uni-button-color: #a4a400;
+  --uni-button-background: #222222;
 }
 html {
   width: 100%;
@@ -443,8 +458,8 @@ html {
   overflow-y: scroll;
 }
 body {
-  background-color: #ffffff;
-  color: #000000;
+  background-color: var(--uni-background);
+  color: var(--uni-color);
   line-height: 1.6;
   font-family: "Times New Roman", Times, serif;
 }
@@ -457,6 +472,18 @@ ul {
 }
 a:not([href]) {
   color: inherit;
+}
+a.link,
+a {
+  color: var(--uni-link);
+}
+a.link:visited,
+a:visited {
+  color: var(--uni-link-visited);
+}
+a.link:active,
+a:active {
+  color: var(--uni-link-active);
 }
 a[href] {
   text-decoration: underline;
@@ -471,8 +498,8 @@ a[href]:hover {
   width: 100%;
   padding: 10px;
   text-align: center;
-  border-bottom: 1px solid #cccccc4d;
-  background-color: inherit;
+  border-bottom: 1px solid var(--uni-border);
+  background-color: var(--uni-background);
   transition: top 0.3s ease-in-out;
 }
 .hidden {
@@ -484,37 +511,46 @@ a[href]:hover {
     display: none;
   }
 }
+.navigation > span:before, .navigation > span:after {
+  content: " "
+}
+.navigation > span:nth-child(2):before {
+  content: "< "
+}
 
+.navigation > span:nth-child(4):after {
+  content: " >"
+}
 .breadcrumbs {
   white-space: nowrap;
+}
+.breadcrumbs a:after {
+  content: " > ";
+  color: var(--uni-color);
 }
 #dark-toggle {
   position: fixed;
   right: 10px;
   padding: 5px 10px;
-  background-color: #444;
-  color: white;
+  background-color: var(--uni-button-background);
+  color: var(--uni-button-color);
   border: none;
   cursor: pointer;
   border-radius: 5px;
-}
-.dark {
-  background-color: #000000;
-  color: #ffffff;
 }
 ::-webkit-scrollbar {
   width: 10px;
   height: 10px;
 }
 ::-webkit-scrollbar-thumb {
-  background-color: var(--generateTOC-border);
+  background-color: var(--uni-scrollbar);
   border-radius: 5px;
 }
 ::-webkit-scrollbar-corner {
   background-color: transparent;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background-color: var(--generateTOC-scrollbarHover);
+  background-color: var(--uni-scrollbarHover);
 }
 
 /* Remove automatic dark mode */
