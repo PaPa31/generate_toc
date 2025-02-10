@@ -119,6 +119,7 @@ a[href]:hover {
   text-decoration: none;
   color: var(--uni-link);
   background-color: rgba(0, 0, 0, 0.05);
+  display: inline-block; /* For IE11/ MS Edge bug */
 }
 
 .page-turning > span > a:hover {
@@ -141,7 +142,6 @@ a[href]:hover {
 
 .page-turning a[aria-disabled='true'] {
   color: var(--uni-color);
-  display: inline-block; /* For IE11/ MS Edge bug */
   pointer-events: none;
   text-decoration: line-through;
 }
