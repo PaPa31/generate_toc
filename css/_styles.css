@@ -81,6 +81,8 @@ a[href] {
 a[href]:hover {
   text-decoration: none;
 }
+
+/* ---------- Start Navbar ---------- */
 .navigation {
   position: fixed;
   top: 0;
@@ -183,16 +185,52 @@ a[href]:hover {
   content: ' > ';
 }
 
+/* Dark mode toggle button */
 #dark-toggle {
-  padding: 5px 10px;
-  background-color: var(--uni-button-background);
-  color: var(--uni-button-color);
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 6px 12px;
+  font-size: 16px;
   border: none;
+  border-radius: 6px;
+  background-color: rgba(0, 0, 0, 0.05);
+  color: var(--uni-button-color);
   cursor: pointer;
-  border-radius: 5px;
-  float: right;
-  margin: -3px 6px 6px;
+  transition: background-color 0.3s ease, transform 0.1s ease-in-out;
 }
+
+/* Hover effect */
+#dark-toggle:hover {
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+/* Active (click) effect */
+#dark-toggle:active {
+  transform: translateY(-50%) scale(0.95);
+}
+
+/* Dark mode version */
+.dark #dark-toggle {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: var(--uni-button-color);
+}
+
+.dark #dark-toggle:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Remove automatic dark mode */
+@media (prefers-color-scheme: dark) {
+  /* Apply dark mode only if no user preference is stored */
+  body:not(.light):not(.dark) {
+    background-color: #000000;
+    color: #ffffff;
+  }
+}
+/* ---------- End Navbar ---------- */
+
 img {
   filter: var(--uni-image-filter);
   opacity: 0.9;
@@ -212,14 +250,6 @@ img {
   background-color: var(--uni-scrollbarHover);
 }
 
-/* Remove automatic dark mode */
-@media (prefers-color-scheme: dark) {
-  /* Apply dark mode only if no user preference is stored */
-  body:not(.light):not(.dark) {
-    background-color: #000000;
-    color: #ffffff;
-  }
-}
 /*-------------*/
 .w {
   font-family: inherit;
