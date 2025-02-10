@@ -198,7 +198,8 @@ a[href]:hover {
   background-color: rgba(0, 0, 0, 0.05);
   color: var(--uni-button-color);
   cursor: pointer;
-  transition: background-color 0.3s ease, transform 0.1s ease-in-out;
+  transition: background-color 0.3s ease, transform 0.1s ease-in-out,
+    opacity 0.2s ease;
 }
 
 /* Hover effect */
@@ -209,6 +210,7 @@ a[href]:hover {
 /* Active (click) effect */
 #dark-toggle:active {
   transform: translateY(-50%) scale(0.95);
+  opacity: 0.6;
 }
 
 /* Dark mode version */
