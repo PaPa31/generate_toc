@@ -176,14 +176,12 @@ generate_toc() {
 
 # Create the TOC HTML file using the generated TOC content.
 create_toc_file() {
-  local css_file="$1"
-  local toc_content="$2"
+  local toc_content="$1"
   cat > "$TOC_FILE" <<EOF
 <!DOCTYPE html>
 <html>
 <head>
   <title>Table of Contents</title>
-  <link rel="stylesheet" href="$css_file"/>
 </head>
 <body>
   <h1>Table of Contents</h1>
@@ -337,7 +335,7 @@ HTML_FILES="$TOC_FILE $HTML_FILES"
 generate_toc "$HTML_FILES"
 
 # Create the TOC HTML file.
-create_toc_file "$CSS_FILE" "$TOC_CONTENT"
+create_toc_file "$TOC_CONTENT"
 echo "TOC generated at: $TOC_FILE"
 
 # Add navigation blocks to all HTML files and measure the time taken.
