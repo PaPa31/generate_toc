@@ -7,11 +7,16 @@ var savedTheme = localStorage.getItem('generateTOCdarkMode')
 
 if (savedTheme === 'dark') {
   bodyEl.classList.add('dark')
+  darkButton.innerHTML = '☀️' // Set sun icon for light mode toggle
 } else if (savedTheme === 'light') {
   bodyEl.classList.add('light')
+  darkButton.innerHTML = '🌙' // Set moon icon for dark mode toggle
 } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
   // If no preference is stored and the system prefers dark mode, enable dark mode.
   bodyEl.classList.add('dark')
+  darkButton.innerHTML = '☀️'
+} else {
+  darkButton.innerHTML = '🌙'
 }
 
 // Add a click event listener to the toggle button to switch themes.
@@ -24,10 +29,12 @@ function toggleDarkMode() {
     bodyEl.classList.remove('dark')
     bodyEl.classList.add('light')
     localStorage.setItem('generateTOCdarkMode', 'light')
+    darkButton.innerHTML = '🌙' // Change to moon icon
   } else {
     bodyEl.classList.remove('light')
     bodyEl.classList.add('dark')
     localStorage.setItem('generateTOCdarkMode', 'dark')
+    darkButton.innerHTML = '☀️' // Change to sun icon
   }
 }
 
