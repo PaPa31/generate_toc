@@ -31,75 +31,35 @@ function toggleDarkMode() {
   }
 }
 
-function debounce(wait, func, immediate) {
-  var timeout
-  return function () {
-    var context = this,
-      args = arguments
-    var later = function () {
-      timeout = null
-      if (!immediate) {
-        func.apply(context, args)
-      }
-    }
-    var callNow = immediate && !timeout
-    clearTimeout(timeout)
-    timeout = setTimeout(later, wait || 200)
-    if (callNow) {
-      func.apply(context, args)
-    }
-  }
-}
-
-// Ensure requestAnimationFrame works in old browsers
-window.requestAnimationFrame =
-  window.requestAnimationFrame ||
-  window.webkitRequestAnimationFrame ||
-  window.mozRequestAnimationFrame ||
-  window.oRequestAnimationFrame ||
-  window.msRequestAnimationFrame ||
-  function (callback) {
-    return setTimeout(callback, 16) // 60 FPS fallback
-  }
-
-var lastScrollTop = 0
-var nav = document.querySelector('.navigation')
+// Start Scroll-Hiding Navigation
+let lastScrollTop = 0
+const nav = document.querySelector('.navigation')
 
 function scroll() {
-  var scrollTop =
-    document.documentElement.scrollTop || document.body.scrollTop || 0
-
+  let scrollTop = window.scrollY || document.documentElement.scrollTop
   if (scrollTop > lastScrollTop) {
-    // Scrolling down, hide navbar
-    if (nav.classList) {
-      nav.classList.add('hidden')
-    } else {
-      nav.className += ' hidden' // Old browser fallback
-    }
+    nav.classList.add('hidden')
   } else {
-    // Scrolling up, show navbar
-    if (nav.classList) {
-      nav.classList.remove('hidden')
-    } else {
-      nav.className = nav.className.replace(/(?:^|\s)hidden(?!\S)/g, '')
+    nav.classList.remove('hidden')
+  }
+  lastScrollTop = scrollTop
+
+  // Always show after 1.5s of no scrolling
+  clearTimeout(nav.timeout)
+  nav.timeout = setTimeout(() => nav.classList.remove('hidden'), 1500)
+}
+
+function debounceRAF(func) {
+  let ticking = false
+  return function () {
+    if (!ticking) {
+      requestAnimationFrame(() => {
+        func()
+        ticking = false
+      })
+      ticking = true
     }
   }
-
-  lastScrollTop = scrollTop
 }
 
-// Use requestAnimationFrame for smooth performance
-function optimizedScroll() {
-  requestAnimationFrame(scroll)
-}
-
-// Attach debounced scroll event listener
-if (window.addEventListener) {
-  window.addEventListener(
-    'scroll',
-    debounce(100, optimizedScroll, false),
-    false
-  )
-} else if (window.attachEvent) {
-  window.attachEvent('onscroll', debounce(100, optimizedScroll, false)) // IE8 fallback
-}
+window.addEventListener('scroll', debounceRAF(scroll), false)
