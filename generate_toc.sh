@@ -44,11 +44,16 @@ fi
 # Change directory to the specified folder so that relative file paths work correctly.
 cd "$FOLDER" || error_response "Cannot change directory to $FOLDER"
 
+# Get the directory where the script is located
+SCRIPT_DIR="$(dirname "$0")"
+# Remove the `/www` prefix from the path
+URL_PATH="${SCRIPT_DIR#/www}"
+
 # Define filenames and HTML fragments used later in the script.
 TOC_FILE="_toc.html"
-STYLES_FILE="$PWD/_styles.css"
+STYLES_FILE="$URL_PATH/css/_styles.css"
 LINK_STYLES="<link type=\"text/css\" rel=\"stylesheet\" href=\"$STYLES_FILE\"/>"
-JS_FILE="$PWD/_script.js"
+JS_FILE="$URL_PATH/js/_script.js"
 SCRIPT="<script type=\"text/javascript\" src=\"$JS_FILE\"></script>"
 META='<meta name="viewport" content="width=device-width, initial-scale=1"/>'
 DARK_TOGGLE='<button id="dark-toggle">🌙</button>'
