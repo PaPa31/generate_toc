@@ -90,8 +90,9 @@ a[href]:hover {
   border-bottom: 1px solid var(--uni-border);
   background-color: var(--uni-background);
   transition: top 0.3s ease-in-out;
-  z-index: 1;
+  z-index: 10;
   font-family: Arial, Helvetica, sans-serif;
+  padding: 8px 0;
 }
 .hidden {
   top: -80px;
@@ -102,34 +103,86 @@ a[href]:hover {
     display: none;
   }
 }
+/* Page turning styles */
 .page-turning {
   display: inline-block;
+  font-size: 14px;
 }
-.page-turning > span:first-child:before {
-  content: '< ';
-}
-.page-turning > span:last-child:after {
-  content: ' >';
-}
+
 .page-turning > span {
-  padding: 0 2px;
+  padding: 0 5px;
 }
-.breadcrumbs {
-  white-space: nowrap;
-  padding: 8px 0 0 8px;
+
+.page-turning > span > a {
+  padding: 4px 8px;
+  border-radius: 4px;
+  text-decoration: none;
+  color: var(--uni-link);
+  background-color: rgba(0, 0, 0, 0.05);
 }
-.breadcrumbs > span:not(:last-child):after {
-  content: ' > ';
+
+.page-turning > span > a:hover {
+  background-color: rgba(0, 0, 0, 0.1);
+  text-decoration: none;
 }
+
+/* Add symbols for previous and next */
+.page-turning > span:first-child a::before {
+  content: '« ';
+}
+
+.page-turning > span:last-child a::after {
+  content: ' »';
+}
+
 .isDisabled {
   opacity: 0.3;
 }
-a[aria-disabled='true'] {
+
+.page-turning a[aria-disabled='true'] {
   color: var(--uni-color);
   display: inline-block; /* For IE11/ MS Edge bug */
   pointer-events: none;
   text-decoration: line-through;
 }
+
+/* Dark mode adjustments */
+.dark .page-turning > span > a {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.dark .page-turning > span > a:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Breadcrumbs styles */
+.breadcrumbs {
+  white-space: nowrap;
+  padding: 6px 10px;
+  font-size: 14px;
+}
+
+.breadcrumbs a {
+  color: var(--uni-link);
+  text-decoration: underline;
+  display: inline-block;
+  padding: 2px 5px;
+}
+
+.breadcrumbs a:hover {
+  text-decoration: none;
+}
+
+/* Highlight the current page */
+.breadcrumbs span:last-child {
+  font-weight: bold;
+  color: var(--uni-color);
+}
+
+.breadcrumbs > span:not(:last-child):after {
+  content: ' > ';
+}
+
 #dark-toggle {
   padding: 5px 10px;
   background-color: var(--uni-button-background);
