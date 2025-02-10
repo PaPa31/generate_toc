@@ -32,34 +32,91 @@ function toggleDarkMode() {
 }
 
 // Start Scroll-Hiding Navigation
-let lastScrollTop = 0
-const nav = document.querySelector('.navigation')
+;(function () {
+  var lastScrollTop = 0
+  var nav = document.querySelector('.navigation')
 
-function scroll() {
-  let scrollTop = window.scrollY || document.documentElement.scrollTop
-  if (scrollTop > lastScrollTop) {
-    nav.classList.add('hidden')
-  } else {
-    nav.classList.remove('hidden')
+  function scroll() {
+    var scrollTop =
+      document.documentElement.scrollTop || document.body.scrollTop || 0
+
+    if (scrollTop > lastScrollTop) {
+      // Scrolling down, hide navbar
+      if (nav.classList) {
+        nav.classList.add('hidden')
+      } else {
+        nav.className += ' hidden' // Fallback for old browsers
+      }
+    } else {
+      // Scrolling up, show navbar
+      if (nav.classList) {
+        nav.classList.remove('hidden')
+      } else {
+        nav.className = nav.className.replace(/(?:^|\s)hidden(?!\S)/g, '')
+      }
+    }
+
+    lastScrollTop = scrollTop
+
+    // Always show navbar after 1.5s of no scrolling
+    clearTimeout(nav.timeout)
+    nav.timeout = setTimeout(function () {
+      if (nav.classList) {
+        nav.classList.remove('hidden')
+      } else {
+        nav.className = nav.className.replace(/(?:^|\s)hidden(?!\S)/g, '')
+      }
+    }, 1500)
   }
-  lastScrollTop = scrollTop
 
-  // Always show after 1.5s of no scrolling
-  clearTimeout(nav.timeout)
-  nav.timeout = setTimeout(() => nav.classList.remove('hidden'), 1500)
-}
-
-function debounceRAF(func) {
-  let ticking = false
-  return function () {
-    if (!ticking) {
-      requestAnimationFrame(() => {
-        func()
-        ticking = false
-      })
-      ticking = true
+  function debounce(wait, func, immediate) {
+    var timeout
+    return function () {
+      var context = this,
+        args = arguments
+      var later = function () {
+        timeout = null
+        if (!immediate) {
+          func.apply(context, args)
+        }
+      }
+      var callNow = immediate && !timeout
+      clearTimeout(timeout)
+      timeout = setTimeout(later, wait || 200)
+      if (callNow) {
+        func.apply(context, args)
+      }
     }
   }
-}
 
-window.addEventListener('scroll', debounceRAF(scroll), false)
+  // Polyfill requestAnimationFrame for older browsers
+  window.requestAnimationFrame =
+    window.requestAnimationFrame ||
+    window.webkitRequestAnimationFrame ||
+    window.mozRequestAnimationFrame ||
+    window.oRequestAnimationFrame ||
+    window.msRequestAnimationFrame ||
+    function (callback) {
+      return setTimeout(callback, 16) // 60 FPS fallback
+    }
+
+  function debounceRAF(func) {
+    var ticking = false
+    return function () {
+      if (!ticking) {
+        requestAnimationFrame(function () {
+          func()
+          ticking = false
+        })
+        ticking = true
+      }
+    }
+  }
+
+  // Attach debounced scroll event listener
+  if (window.addEventListener) {
+    window.addEventListener('scroll', debounceRAF(scroll), false)
+  } else if (window.attachEvent) {
+    window.attachEvent('onscroll', debounce(100, scroll, false)) // IE8 fallback
+  }
+})()
