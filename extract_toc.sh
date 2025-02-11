@@ -11,23 +11,31 @@ fi
 if grep -q "<ncx" "$INPUT_FILE"; then
     echo "Detected toc.ncx format. Extracting TOC..."
     
-    # Extract navPoints and format output as "title - href"
-    awk '
-    BEGIN { RS="<navPoint"; ORS="\n\n" }
+    # Insert newline before each <navPoint> to force record separation even if XML is minified.
+    sed 's/<navPoint/\n<navPoint/g' "$INPUT_FILE" | awk '
     NR > 1 {
         title = ""; href = "";
-        if (match($0, /<text>([^<]+)<\/text>/, arr)) title = arr[1];
-        if (match($0, /src="([^"]+)"/, arr)) href = arr[1];
-        if (title && href) print title " - " href;
-    }
-    ' "$INPUT_FILE"
+        # Try to extract title from <navLabel><text>Title</text></navLabel>
+        if (match($0, /<navLabel>[ \t\r\n]*<text>([^<]+)<\/text>/, arr)) {
+            title = arr[1];
+        } else if (match($0, /<text>([^<]+)<\/text>/, arr)) {
+            title = arr[1];
+        }
+        # Extract href from <content ... src="...">
+        if (match($0, /<content[^>]+src="([^">]+)"/, arr)) {
+            href = arr[1];
+        }
+        if (title != "" && href != "") {
+            print title " - " href;
+        }
+    }'
 
 elif grep -q "<nav " "$INPUT_FILE"; then
     echo "Detected nav.xhtml format. Extracting TOC..."
     
-    # Extract <li> links and format output as "title - href"
-    sed -n 's/.*<a href="\([^"]*\)">\([^<]*\)<\/a>.*/\2 - \1/p' "$INPUT_FILE"
-
+    # Insert newline before each <li> element if needed
+    sed 's/<li/\n<li/g' "$INPUT_FILE" | sed -n 's/.*<a href="\([^"]*\)">\([^<]*\)<\/a>.*/\2 - \1/p'
+    
 else
     echo "Unknown format: $INPUT_FILE"
     exit 1
