@@ -97,7 +97,7 @@ a[href]:hover {
   padding: 8px 0;
 }
 .hidden {
-  top: -80px;
+  top: -86px;
 }
 /* Fallback for old browsers (if transition is unsupported) */
 @media screen and (-ms-high-contrast: active), (-ms-high-contrast: none) {
