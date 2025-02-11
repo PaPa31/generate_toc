@@ -64,16 +64,6 @@ function toggleDarkMode() {
     }
 
     lastScrollTop = scrollTop
-
-    // Always show navbar after 1.5s of no scrolling
-    clearTimeout(nav.timeout)
-    nav.timeout = setTimeout(function () {
-      if (nav.classList) {
-        nav.classList.remove('hidden')
-      } else {
-        nav.className = nav.className.replace(/(?:^|\s)hidden(?!\S)/g, '')
-      }
-    }, 1500)
   }
 
   function debounce(wait, func, immediate) {
