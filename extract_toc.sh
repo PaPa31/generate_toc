@@ -41,11 +41,21 @@ if grep -q "<ncx" "$INPUT_FILE"; then
 elif grep -q "<nav " "$INPUT_FILE"; then
     echo "Detected nav.xhtml format. Extracting TOC..."
 
-    # For nav.xhtml, insert a newline before each <li> tag and then extract links.
-    sed 's/<li/\
+   # If a <nav> with epub:type="toc" exists, extract that block only.
+    if grep -q '<nav[^>]*epub:type="toc"' "$INPUT_FILE"; then
+        # Insert newline before <nav> to help extraction (handles minified files)
+        sed 's/<nav/\n<nav/g' "$INPUT_FILE" | \
+        sed -n '/<nav[^>]*epub:type="toc"[^>]*>/,/<\/nav>/p' | \
+        sed 's/<li/\
+<li/g' | \
+        sed -n 's/.*<a href="\([^"]*\)">\([^<]*\)<\/a>.*/\2 - \1/p'
+    else
+        # Otherwise, process the whole file.
+        sed 's/<li/\
 <li/g' "$INPUT_FILE" | \
-    sed -n 's/.*<a href="\([^"]*\)">\([^<]*\)<\/a>.*/\2 - \1/p'
-    
+        sed -n 's/.*<a href="\([^"]*\)">\([^<]*\)<\/a>.*/\2 - \1/p'
+    fi
+
 else
     echo "Unknown format: $INPUT_FILE"
     exit 1
