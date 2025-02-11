@@ -76,47 +76,32 @@ detect_css_file() {
 
 # Detect a TOC source file. This function checks for commonly used filenames.
 detect_toc_source() {
-  if [ -f "toc01.html" ]; then
-    echo "toc.xhtml"
-  elif [ -f "nav.xhtml" ]; then
-    echo "nav.xhtml"
-  elif [ -f "toc.ncx" ]; then
-    echo "toc.ncx"
-  else
-    echo ""
-  fi
+  for file in "toc.xhtml" "nav.xhtml" "toc.ncx"; do
+    [ -f "$file" ] && echo "$file" && return
+  done
+  echo ""
 }
 
 # Detect a cover page, if one exists. This also handles extracting the cover from content.opf.
 detect_cover_page() {
-  if [ -f "cover.html" ]; then
-    echo "cover.html"
-  elif [ -f "cover.xhtml" ]; then
-    echo "cover.xhtml"
-  elif [ -f "content.opf" ]; then
-    # Extract the cover id from content.opf using awk.
+  for file in "cover.html" "cover.xhtml"; do
+    [ -f "$file" ] && echo "$file" && return
+  done
+  if [ -f "content.opf" ]; then
     COVER_ID=$(awk -F'<meta name="cover" content="|"' '/<meta name="cover"/ {print $2}' content.opf)
-    if [ -n "$COVER_ID" ]; then
-      # Use the cover id to extract the cover file name.
-      awk -F'id="'$COVER_ID'" href="|"' '/id="'$COVER_ID'"/ {print $2}' content.opf
-    fi
+    [ -n "$COVER_ID" ] && awk -F'id="'$COVER_ID'" href="|"' '/id="'$COVER_ID'"/ {print $2}' content.opf
   fi
 }
 
 # Extract an ordered list of HTML files.
-# If a TOC source is available, extract file names from its <a href=""> tags;
-# otherwise, list all HTML files alphabetically.
 extract_ordered_files() {
   local toc_source="$1"
-  if [ "$toc_source" = "toc01.html" ]; then
-    sed -n 's/.*<a href="\([^"]*\)".*/\1/p' "$toc_source" | cut -d '#' -f 1 | grep -E '\.html|\.xhtml' | tr '\n' ' '
-  elif [ "$toc_source" = "nav.xhtml" ]; then
-    awk -F'<a href="|"' '/<a href="/ {print $2}' "$toc_source" | grep -E '\.html|\.xhtml' | tr '\n' ' '
-  elif [ "$toc_source" = "toc.ncx" ]; then
-    awk -F'<content src="|"' '/<content src="/ {print $2}' "$toc_source" | grep -E '\.html|\.xhtml' | tr '\n' ' '
-  else
-    ls *.html *.xhtml 2>/dev/null | sort
-  fi
+  case "$toc_source" in
+    toc.xhtml) sed -n 's/.*<a href="\([^\"]*\)".*/\1/p' "$toc_source" | cut -d '#' -f 1 ;;
+    nav.xhtml) awk -F'<a href="|"' '/<a href="/ {print $2}' "$toc_source" ;;
+    toc.ncx) awk -F'<content src="|"' '/<content src="/ {print $6}' "$toc_source" ;;
+    *) ls *.html *.xhtml 2>/dev/null | sort ;;
+  esac | grep -E '\.html|\.xhtml' | tr '\n' ' '
 }
 
 #####################################
