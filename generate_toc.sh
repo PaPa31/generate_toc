@@ -69,8 +69,7 @@ BREADCRUMB_BOOK="../"
 # Global variable for storing file-to-title mappings.
 TITLE_MAP=""     # Will hold mapping lines: href|||title
 TOC_CONTENT=""   # Will hold the final TOC HTML content
-HTML_FILES=""
-TOC_SOURCE=""
+FILE_LIST=""
 
 #####################################
 # Detect and extract helper functions
@@ -85,10 +84,10 @@ detect_css_file() {
 #####################################
 # Detect a TOC source file. This function checks for commonly used filenames.
 detect_toc_source() {
-    if [ -f "toc.ncx" ]; then
-        echo "toc.ncx"
-    elif [ -f "nav.xhtml" ]; then
+    if [ -f "nav.xhtml" ]; then
         echo "nav.xhtml"
+    elif [ -f "toc.ncx" ]; then
+        echo "toc.ncx"
     elif [ -f "toc.xhtml" ]; then
         echo "toc.xhtml"
     else
@@ -99,6 +98,8 @@ detect_toc_source() {
 #####################################
 # New Function: Extract TOC Content from Navigation File
 #####################################
+# This function extracts navigation lines (formatted as "Title - href")
+# from a TOC source file (NCX or HTML navigation).
 extract_toc_content() {
     local toc_source="$1"
     if [ "$toc_source" = "toc.ncx" ]; then
@@ -147,11 +148,14 @@ extract_toc_content() {
 }
 
 #####################################
-# New Function: Generate Mapping and TOC HTML from Extracted Lines
+# New Function: Generate Mapping and TOC HTML from Extracted Navigation Lines
 #####################################
+# Input: Lines in the format "Title - href"
+# Output: 
+#   - TITLE_MAP is built in the format "href|||title" (and written to file "map")
+#   - TOC_CONTENT is built as an unordered HTML list.
 generate_mapping_and_toc() {
     local extracted="$1"
-    local html_list=""
     local toc_content="<ul>"
     TITLE_MAP=""  # Reset mapping
 
@@ -162,6 +166,9 @@ generate_mapping_and_toc() {
         href=$(echo "$href" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
         # Append to mapping in the format: href|||title (each mapping separated by a newline)
         TITLE_MAP="${TITLE_MAP}${href}|||${title}\n"
+        # Remove any anchor (fragment) from the file name.
+        strip_anchor=$(echo "$file" | cut -d '#' -f 1)
+        FILE_LIST="${FILE_LIST}${strip_anchor} "
         # Append to TOC HTML content
         toc_content="${toc_content}<li><a href='$href'>$title</a></li>"
     done <<EOF
@@ -173,6 +180,51 @@ EOF
 
     # Optionally, write the mapping to a file named "map"
     printf "%b" "$TITLE_MAP" > map
+}
+
+#####################################
+# New Function: Generate TOC from HTML Files
+#####################################
+# This function is used when no TOC source file is found.
+# It scans all HTML files in the directory, extracts the <title> from each,
+# and builds the mapping (filename|||title) and TOC HTML content.
+generate_toc_from_html_files() {
+    local files=$(ls *.html *.xhtml 2>/dev/null | sort)
+    local toc_content="<ul>"
+    TITLE_MAP=""
+    for file in $files; do
+        if [ "$file" = "$TOC_FILE" ]; then
+            title="Table of Contents"
+        else
+            title=$(awk -F'<title>|</title>' '/<title>/ {print $2; exit}' "$file")
+            [ -z "$title" ] && title="$file"
+        fi
+        TITLE_MAP="${TITLE_MAP}${file}|||${title}\n"
+        toc_content="${toc_content}<li><a href='$file'>$title</a></li>"
+    done
+    toc_content="${toc_content}</ul>"
+    TOC_CONTENT=$(printf "%b" "$toc_content")
+    FILE_LIST=$files
+    printf "%b" "$TITLE_MAP" > map
+}
+
+#####################################
+# Create TOC HTML File
+#####################################
+create_toc_file() {
+    local toc_content="$1"
+    cat > "$TOC_FILE" <<EOF
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Table of Contents</title>
+</head>
+<body>
+  <h1>Table of Contents</h1>
+  $toc_content
+</body>
+</html>
+EOF
 }
 
 # Detect a cover page, if one exists. This also handles extracting the cover from content.opf.
@@ -322,50 +374,35 @@ echo "The injected JavaScript file is located: $JS_FILE"
 
 echo
 
-# Detect TOC source file.
+# --- Step 1: TOC Source Detection ---
 TOC_SOURCE=$(detect_toc_source)
 
-# We need to split our logic into two paths:
-# 1) We did not find the TOC source file and need to force it to be created;
-# 2) We have found the TOC source file and need to extract data from it, and we don't need to create an additional TOC file.
 if [ -z "$TOC_SOURCE" ]; then
-  # path 1: when TOC source file not found - we need to create a TOC file forcibly
-  log_debug "No TOC source file found (toc.ncx, nav.xhtml, or toc.xhtml)."
-  HTML_FILES=$(ls *.html *.xhtml 2>/dev/null | sort)
-  log_debug "Created list of HTML files: $HTML_FILES"
+  # Path 1: No TOC source file found → Generate TOC by scanning HTML files.
+  log_debug "No TOC source file found. Forcing TOC creation from HTML files."
+  generate_toc_from_html_files
+  log_debug "Created list of HTML files: $TITLE_MAP"
 
   # Ensure the TOC file is included in the list so it gets a navigation block.
-  HTML_FILES="$TOC_FILE $HTML_FILES"
+  #HTML_FILES="$TOC_FILE $HTML_FILES"
+  TITLE_MAP="${TOC_FILE}|||Table of Contents\n${TITLE_MAP}"
 
   # If a cover page exists, add it to the beginning of the file list.
   COVER_PAGE=$(detect_cover_page)
-  [ -n "$COVER_PAGE" ] && HTML_FILES="$COVER_PAGE $HTML_FILES"
-
-  # We need to put here a logic (possibly a separate function) that
-  # 1) extract <titles> from HTML files
-  # 2) create variable with filename|||title format (as inside EXTRACTED_TOC)
-  FORCED_TOC=$(extract_title "$HTML_FILES") # example
-  log_debug "Forced create TOC lines: $FORCED_TOC"
-
-  # Extract TOC lines from the forcedly created file.
-  EXTRACTED_TOC=$(extract_toc_content "$FORCED_TOC")
-  log_debug "Extracted TOC lines:"
-  echo "$EXTRACTED_TOC"
-
-    # Build the mapping and the TOC HTML content.
-  [ -n "$EXTRACTED_TOC" ] && generate_mapping_and_toc "$EXTRACTED_TOC"
-
+  #[ -n "$COVER_PAGE" ] && HTML_FILES="$COVER_PAGE $HTML_FILES"
+  [ -n "$COVER_PAGE" ] && TITLE_MAP="${COVER_PAGE}|||Cover\n${TITLE_MAP}"
+  log_debug "Final list of HTML files: $TITLE_MAP"
 else
-  # path 2: When one of the TOC source files is found
+  # Path 2: TOC source file found → Extract data from it.
   log_debug "Detected TOC source: $TOC_SOURCE"
 
   # Extract TOC lines from the navigation file.
-  EXTRACTED_TOC=$(extract_toc_content "$TOC_SOURCE")
+  extracted_toc=$(extract_toc_content "$TOC_SOURCE")
   log_debug "Extracted TOC lines:"
-  echo "$EXTRACTED_TOC"
+  echo "$extracted_toc"
 
   # Build the mapping and the TOC HTML content.
-  [ -n "$EXTRACTED_TOC" ] && generate_mapping_and_toc "$EXTRACTED_TOC"
+  generate_mapping_and_toc "$extracted_toc"
 fi
 
 # Add navigation blocks to HTML files.
