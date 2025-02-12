@@ -158,20 +158,25 @@ generate_mapping_and_toc() {
     local extracted="$1"
     local toc_content="<ul>"
     TITLE_MAP=""  # Reset mapping
+    local prev=""
 
     # Use a here-document so that the while loop runs in the current shell (avoiding subshell issues)
     while IFS='-' read -r title href; do
-        # Skip the TOC file to prevent self-inclusion.
+        # Trim whitespace from title and href.
         title=$(echo "$title" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
         href=$(echo "$href" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
-        # Append to mapping in the format: href|||title (each mapping separated by a newline)
-        TITLE_MAP="${TITLE_MAP}${href}|||${title}\n"
         # Remove any anchor (fragment) from the file name.
-        strip_anchor=$(echo "$href" | cut -d '#' -f 1)
-        # Populate HTML file list
-        FILE_LIST="${FILE_LIST}${strip_anchor} "
+        local strip_anchor=$(echo "$href" | cut -d '#' -f 1)
+        # Ignore if filename repeat
+        if [ "$prev" != "$strip_anchor" ]; then
+          # Append to mapping in the format: href|||title (each mapping separated by a newline)
+          TITLE_MAP="${TITLE_MAP}${strip_anchor}|||${title}\n"
+          # Populate HTML file list
+          FILE_LIST="${FILE_LIST}${strip_anchor} "
+        fi
         # Append to TOC HTML content
         toc_content="${toc_content}<li><a href='$href'>$title</a></li>"
+        prev="$strip_anchor"
     done <<EOF
 $extracted
 EOF
