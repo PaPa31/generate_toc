@@ -66,10 +66,11 @@ DARK_TOGGLE='<button id="dark-toggle">🌙</button>'
 BREADCRUMB_HOME="../../../../"
 BREADCRUMB_BOOK="../"
 
-
 # Global variable for storing file-to-title mappings.
-# Each mapping line is in the format: filename|||title
-TITLE_MAP=""
+TITLE_MAP=""     # Will hold mapping lines: href|||title
+TOC_CONTENT=""   # Will hold the final TOC HTML content
+HTML_FILES=""
+TOC_SOURCE=""
 
 #####################################
 # Detect and extract helper functions
@@ -84,10 +85,10 @@ detect_css_file() {
 #####################################
 # Detect a TOC source file. This function checks for commonly used filenames.
 detect_toc_source() {
-    if [ -f "nav.xhtml" ]; then
-        echo "nav.xhtml"
-    elif [ -f "toc.ncx" ]; then
+    if [ -f "toc.ncx" ]; then
         echo "toc.ncx"
+    elif [ -f "nav.xhtml" ]; then
+        echo "nav.xhtml"
     elif [ -f "toc.xhtml" ]; then
         echo "toc.xhtml"
     else
@@ -96,7 +97,7 @@ detect_toc_source() {
 }
 
 #####################################
-# New Function: Extract TOC Content
+# New Function: Extract TOC Content from Navigation File
 #####################################
 extract_toc_content() {
     local toc_source="$1"
@@ -146,24 +147,33 @@ extract_toc_content() {
 }
 
 #####################################
-# New Function: Generate TOC HTML from Extracted Lines
+# New Function: Generate Mapping and TOC HTML from Extracted Lines
 #####################################
-generate_toc_from_extracted() {
+generate_mapping_and_toc() {
     local extracted="$1"
+    local html_list=""
     local toc_content="<ul>"
-    # Process each line (format: "Title - href")
-    echo "$extracted" | while IFS='-' read -r title href; do
-        # Trim whitespace from title and href.
+    TITLE_MAP=""  # Reset mapping
+
+    # Use a here-document so that the while loop runs in the current shell (avoiding subshell issues)
+    while IFS='-' read -r title href; do
+        # Skip the TOC file to prevent self-inclusion.
         title=$(echo "$title" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
         href=$(echo "$href" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
-        toc_content="$toc_content<li><a href='$href'>$title</a></li>"
-    done
-    toc_content="$toc_content</ul>"
+        # Append to mapping in the format: href|||title (each mapping separated by a newline)
+        TITLE_MAP="${TITLE_MAP}${href}|||${title}\n"
+        # Append to TOC HTML content
+        toc_content="${toc_content}<li><a href='$href'>$title</a></li>"
+    done <<EOF
+$extracted
+EOF
+
+    toc_content="${toc_content}</ul>"
     TOC_CONTENT="$toc_content"
+
+    # Optionally, write the mapping to a file named "map"
+    printf "%b" "$TITLE_MAP" > map
 }
-
-
-
 
 # Detect a cover page, if one exists. This also handles extracting the cover from content.opf.
 detect_cover_page() {
@@ -174,93 +184,6 @@ detect_cover_page() {
     COVER_ID=$(awk -F'<meta name="cover" content="|"' '/<meta name="cover"/ {print $2}' content.opf)
     [ -n "$COVER_ID" ] && awk -F'id="'$COVER_ID'" href="|"' '/id="'$COVER_ID'"/ {print $2}' content.opf
   fi
-}
-
-# Extract an ordered list of HTML files.
-extract_ordered_files() {
-  local toc_source="$1"
-  case "$toc_source" in
-    toc.xhtml) sed -n 's/.*<a href="\([^\"]*\)".*/\1/p' "$toc_source" | cut -d '#' -f 1 ;;
-    nav.xhtml) awk -F'<a href="|"' '/<a href="/ {print $2}' "$toc_source" ;;
-    toc.ncx) awk -F'<content src="|"' '/<content src="/ {print $6}' "$toc_source" ;;
-    *) ls *.html *.xhtml 2>/dev/null | sort ;;
-  esac | grep -E '\.html|\.xhtml' | tr '\n' ' '
-}
-
-#####################################
-# TOC and Navigation Generation
-#####################################
-
-# Generate TOC content and build the TITLE_MAP with pretty formatting.
-generate_toc() {
-  local files="$1"
-  # Start the unordered list with a newline.
-  # Note: The string is built normally; later we convert it so the "\n" become actual newlines.
-  local toc_content="<ul>"
-  local strip_anchor=""
-  local title=""
-
-  # Loop over each file to build TOC content and mapping.
-  for file in $files; do
-    # Skip the TOC file to prevent self-inclusion.
-    if [ "$file" != "$TOC_FILE" ]; then
-      # Remove any anchor (fragment) from the file name.
-      strip_anchor=$(echo "$file" | cut -d '#' -f 1)
-      # Extract the title from the HTML file (first occurrence of <title> tag).
-      title=$(awk -F'<title>|</title>' '/<title>/ {print $2; exit}' "$strip_anchor")
-      # If no title is found, default to the file name.
-      [ -z "$title" ] && title="$file"
-    else
-      # Default title for the TOC file itself.
-      title="Table of Contents"
-    fi
-
-    # Append a mapping line (using literal "\n" which will be converted later).
-    TITLE_MAP="${TITLE_MAP}${file}|||${title}\n"
-
-    # Append the formatted list item with indentations and newlines.
-    toc_content="${toc_content}<li><a href='$file'>$title</a></li>"
-  done
-
-  # Close the unordered list.
-  toc_content="${toc_content}</ul>"
-
-  # Convert the TOC string: change literal "\n" sequences into actual newlines.
-  TOC_CONTENT=$(printf "%b" "$toc_content")
-
-  # Debug output: print the TITLE_MAP
-  echo "TITLE_MAP:"
-  printf "%b" "$TITLE_MAP"
-  #echo
-  #printf "%b" "$TITLE_MAP" | od -c
-
-  # Write the TITLE_MAP to the file "map" (again converting escape sequences).
-  printf "%b" "$TITLE_MAP" > map
-
-  # Debug output: show the final TOC_CONTENT.
-  echo "TOC_CONTENT:"
-  printf "%b" "$toc_content"
-}
-
-#####################################
-# Create TOC HTML File
-#####################################
-
-# Create the TOC HTML file using the generated TOC content.
-create_toc_file() {
-  local toc_content="$1"
-  cat > "$TOC_FILE" <<EOF
-<!DOCTYPE html>
-<html>
-<head>
-  <title>Table of Contents</title>
-</head>
-<body>
-  <h1>Table of Contents</h1>
-  $toc_content
-</body>
-</html>
-EOF
 }
 
 # Generate breadcrumb navigation HTML for a given page title.
@@ -292,15 +215,17 @@ lookup_title() {
   printf "%b" "$TITLE_MAP" | grep "^$file|||"
 }
 
-# Add navigation blocks (Previous, Contents, Next links) to each HTML file.
-# The TITLE_MAP is used to determine page titles.
+#####################################
+# (Existing) Navigation Insertion Function
+#####################################
+# This function uses TITLE_MAP (in href|||title format) to add Previous/Next navigation blocks to each HTML file.
 add_navigation() {
-  local files="$1"
+  local files="$@"
   local prev=""
   local curr=""
   # A gap div to create vertical spacing for the navigation bar.
   local gap="<div style=\"height: 70px;\"></div>"
-  # The content to insert between </head> and <body> (includes CSS link, meta tag, and gap).
+  # The content to insert between </head> and <body> (includes CSS link and meta tag).
   local between="$LINK_STYLES$META</head>"
 
   # Loop over each file in the list.
@@ -312,7 +237,7 @@ add_navigation() {
     # Only process if there is a current file and it's different from the next file.
     if [ -n "$curr" ] && [ "$strip_anchor" != "$curr" ]; then
       echo "Curr: $curr"
-      # Lookup the title mapping for the current file.
+      # Lookup the title for curr from TITLE_MAP (format: filename|||title)
       local mapping_line=$(printf "%b" "$TITLE_MAP" | grep "^$curr|||")
       echo "Mapping Line: $mapping_line"
 
@@ -334,7 +259,7 @@ add_navigation() {
         nav_block="${nav_block}<span class=\"isDisabled\"><a href=\"#\" aria-disabled=\"true\">Previous</a></span>"
       fi
       nav_block="${nav_block}<span><a href=\"$TOC_FILE\">Contents</a></span>"
-      [ -n "$next" ] && nav_block="${nav_block}<span><a href=\"$next\">Next</a></span>"
+      nav_block="${nav_block}<span><a href=\"$next\">Next</a></span>"
       nav_block="${nav_block}</div>$DARK_TOGGLE"
       nav_block="${nav_block}</div>"
 
@@ -369,7 +294,7 @@ add_navigation() {
     nav_block="${nav_block}<div class=\"page-turning\">"
     [ -n "$prev" ] && nav_block="${nav_block}<span><a href=\"$prev\">Previous</a></span>"
     nav_block="${nav_block}<span><a href=\"$TOC_FILE\">Contents</a></span>"
-    [ -n "$next" ] && nav_block="${nav_block}<span class=\"isDisabled\"><a href=\"#\" aria-disabled=\"true\">Next</a></span>"
+    nav_block="${nav_block}<span class=\"isDisabled\"><a href=\"#\" aria-disabled=\"true\">Next</a></span>"
     nav_block="${nav_block}</div>$DARK_TOGGLE"
     nav_block="${nav_block}</div>"
 
@@ -387,52 +312,64 @@ log_debug "Generate TOC Script Started"
 
 # Detect any existing CSS file (if one exists).
 CSS_FILE=$(detect_css_file)
+log_debug "Existing CSS file found: $CSS_FILE"
 
-# Show paths to CSS and JavaScript files.
-echo "Styles file located: $STYLES_FILE"
-echo "Javascript file located: $JS_FILE"
+echo
 
-# Determine the TOC source file (if available) and extract ordered HTML files.
+# Show paths to Uni-CSS and JavaScript files.
+echo "The Uni-styles file is located: $STYLES_FILE"
+echo "The injected JavaScript file is located: $JS_FILE"
+
+echo
+
+# Detect TOC source file.
 TOC_SOURCE=$(detect_toc_source)
+
+# We need to split our logic into two paths:
+# 1) We did not find the TOC source file and need to force it to be created;
+# 2) We have found the TOC source file and need to extract data from it, and we don't need to create an additional TOC file.
 if [ -z "$TOC_SOURCE" ]; then
-    error_response "No TOC source file found (toc.ncx, nav.xhtml, or toc.xhtml)."
+  # path 1: when TOC source file not found - we need to create a TOC file forcibly
+  log_debug "No TOC source file found (toc.ncx, nav.xhtml, or toc.xhtml)."
+  HTML_FILES=$(ls *.html *.xhtml 2>/dev/null | sort)
+  log_debug "Created list of HTML files: $HTML_FILES"
+
+  # Ensure the TOC file is included in the list so it gets a navigation block.
+  HTML_FILES="$TOC_FILE $HTML_FILES"
+
+  # If a cover page exists, add it to the beginning of the file list.
+  COVER_PAGE=$(detect_cover_page)
+  [ -n "$COVER_PAGE" ] && HTML_FILES="$COVER_PAGE $HTML_FILES"
+
+  # We need to put here a logic (possibly a separate function) that
+  # 1) extract <titles> from HTML files
+  # 2) create variable with filename|||title format (as inside EXTRACTED_TOC)
+  FORCED_TOC=$(extract_title "$HTML_FILES") # example
+  log_debug "Forced create TOC lines: $FORCED_TOC"
+
+  # Extract TOC lines from the forcedly created file.
+  EXTRACTED_TOC=$(extract_toc_content "$FORCED_TOC")
+  log_debug "Extracted TOC lines:"
+  echo "$EXTRACTED_TOC"
+
+    # Build the mapping and the TOC HTML content.
+  [ -n "$EXTRACTED_TOC" ] && generate_mapping_and_toc "$EXTRACTED_TOC"
+
+else
+  # path 2: When one of the TOC source files is found
+  log_debug "Detected TOC source: $TOC_SOURCE"
+
+  # Extract TOC lines from the navigation file.
+  EXTRACTED_TOC=$(extract_toc_content "$TOC_SOURCE")
+  log_debug "Extracted TOC lines:"
+  echo "$EXTRACTED_TOC"
+
+  # Build the mapping and the TOC HTML content.
+  [ -n "$EXTRACTED_TOC" ] && generate_mapping_and_toc "$EXTRACTED_TOC"
 fi
 
-# Extract the TOC content (lines of "Title - href")
-extracted_toc=$(extract_toc_content "$TOC_SOURCE")
-log_debug "Extracted TOC lines:"
-echo "$extracted_toc"
-
-# Generate the HTML TOC from the extracted lines.
-generate_toc_from_extracted "$extracted_toc"
-create_toc_file "$TOC_CONTENT"
-echo "TOC generated at: $TOC_FILE"
-
-
-#HTML_FILES=$(extract_ordered_files "$TOC_SOURCE")
-
-# Optionally, add navigation blocks to each HTML file if needed.
-# For example:
- HTML_FILES=$(ls *.html *.xhtml 2>/dev/null | sort)
-# add_navigation "$HTML_FILES"
-
-# Ensure the TOC file is included in the list so it gets a navigation block.
-HTML_FILES="$TOC_FILE $HTML_FILES"
-
-# If a cover page exists, add it to the beginning of the file list.
-COVER_PAGE=$(detect_cover_page)
-[ -n "$COVER_PAGE" ] && HTML_FILES="$COVER_PAGE $HTML_FILES"
-
-# Generate the TOC content and build the TITLE_MAP.
-#generate_toc "$HTML_FILES"
-
-# Create the TOC HTML file.
-#create_toc_file "$TOC_CONTENT"
-#echo "TOC generated at: $TOC_FILE"
-
-# Add navigation blocks to all HTML files and measure the time taken.
-timer add_navigation "$HTML_FILES"
-log_debug "Elapsed Time (add_navigation): ${elapsed}s"
+# Add navigation blocks to HTML files.
+[ -n "$HTML_FILES" ] && timer add_navigation $HTML_FILES && log_debug "Elapsed Time (add_navigation): ${elapsed}s"
 echo "Navigation added to HTML files."
 
 # Calculate and log the total elapsed execution time.
