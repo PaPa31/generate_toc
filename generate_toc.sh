@@ -168,6 +168,7 @@ generate_mapping_and_toc() {
         TITLE_MAP="${TITLE_MAP}${href}|||${title}\n"
         # Remove any anchor (fragment) from the file name.
         strip_anchor=$(echo "$href" | cut -d '#' -f 1)
+        # Populate HTML file list
         FILE_LIST="${FILE_LIST}${strip_anchor} "
         # Append to TOC HTML content
         toc_content="${toc_content}<li><a href='$href'>$title</a></li>"
@@ -177,6 +178,10 @@ EOF
 
     toc_content="${toc_content}</ul>"
     TOC_CONTENT=$(printf "%b" "$toc_content")
+
+    # Debug output: print the TITLE_MAP
+    echo "TITLE_MAP:"
+    printf "%b" "$TITLE_MAP"
 
     # Optionally, write the mapping to a file named "map"
     printf "%b" "$TITLE_MAP" > map
@@ -204,8 +209,14 @@ generate_toc_from_html_files() {
     done
     toc_content="${toc_content}</ul>"
     TOC_CONTENT=$(printf "%b" "$toc_content")
-    FILE_LIST="$files"
+
+    # Debug output: print the TITLE_MAP
+    echo "TITLE_MAP:"
+    printf "%b" "$TITLE_MAP"
+
     printf "%b" "$TITLE_MAP" > map
+
+    FILE_LIST="$files"
 }
 
 #####################################
@@ -392,6 +403,7 @@ if [ -z "$TOC_SOURCE" ]; then
   # Ensure the TOC file is included in the list so it gets a navigation block.
   #HTML_FILES="$TOC_FILE $HTML_FILES"
   TITLE_MAP="${TOC_FILE}|||Table of Contents\n${TITLE_MAP}"
+  TITLE_MAP=$(printf "%b" "$TITLE_MAP")
   FILE_LIST="${TOC_FILE} ${FILE_LIST}"
 
   # If a cover page exists, add it to the beginning of the file list.
@@ -419,6 +431,7 @@ else
 
     # Ensure the TOC file is included in the list so it gets a navigation block.
     TITLE_MAP="${TOC_FILE}|||Table of Contents\n${TITLE_MAP}"
+    TITLE_MAP=$(printf "%b" "$TITLE_MAP")
     FILE_LIST="${TOC_FILE} ${FILE_LIST}"
   fi
   log_debug "Final list of HTML files: $TITLE_MAP"
