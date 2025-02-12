@@ -167,7 +167,7 @@ generate_mapping_and_toc() {
         # Append to mapping in the format: href|||title (each mapping separated by a newline)
         TITLE_MAP="${TITLE_MAP}${href}|||${title}\n"
         # Remove any anchor (fragment) from the file name.
-        strip_anchor=$(echo "$file" | cut -d '#' -f 1)
+        strip_anchor=$(echo "$href" | cut -d '#' -f 1)
         FILE_LIST="${FILE_LIST}${strip_anchor} "
         # Append to TOC HTML content
         toc_content="${toc_content}<li><a href='$href'>$title</a></li>"
@@ -176,7 +176,7 @@ $extracted
 EOF
 
     toc_content="${toc_content}</ul>"
-    TOC_CONTENT="$toc_content"
+    TOC_CONTENT=$(printf "%b" "$toc_content")
 
     # Optionally, write the mapping to a file named "map"
     printf "%b" "$TITLE_MAP" > map
@@ -204,7 +204,7 @@ generate_toc_from_html_files() {
     done
     toc_content="${toc_content}</ul>"
     TOC_CONTENT=$(printf "%b" "$toc_content")
-    FILE_LIST=$files
+    FILE_LIST="$files"
     printf "%b" "$TITLE_MAP" > map
 }
 
@@ -212,12 +212,14 @@ generate_toc_from_html_files() {
 # Create TOC HTML File
 #####################################
 create_toc_file() {
-    local toc_content="$1"
+    local existing_css="$1"
+    local toc_content="$2"
     cat > "$TOC_FILE" <<EOF
 <!DOCTYPE html>
 <html>
 <head>
   <title>Table of Contents</title>
+  <link type="text/css" rel="stylesheet" href="$existing_css"/>
 </head>
 <body>
   <h1>Table of Contents</h1>
@@ -374,7 +376,7 @@ echo "The injected JavaScript file is located: $JS_FILE"
 
 echo
 
-# --- Step 1: TOC Source Detection ---
+# TOC Source Detection
 TOC_SOURCE=$(detect_toc_source)
 
 if [ -z "$TOC_SOURCE" ]; then
@@ -383,9 +385,14 @@ if [ -z "$TOC_SOURCE" ]; then
   generate_toc_from_html_files
   log_debug "Created list of HTML files: $TITLE_MAP"
 
+  # Create the TOC HTML file
+  create_toc_file "$CSS_FILE" "$TOC_CONTENT"
+  echo "TOC generated at: $TOC_FILE"
+
   # Ensure the TOC file is included in the list so it gets a navigation block.
   #HTML_FILES="$TOC_FILE $HTML_FILES"
   TITLE_MAP="${TOC_FILE}|||Table of Contents\n${TITLE_MAP}"
+  FILE_LIST="${TOC_FILE} ${FILE_LIST}"
 
   # If a cover page exists, add it to the beginning of the file list.
   COVER_PAGE=$(detect_cover_page)
@@ -403,10 +410,28 @@ else
 
   # Build the mapping and the TOC HTML content.
   generate_mapping_and_toc "$extracted_toc"
+  log_debug "PredFinal list of HTML files: $TITLE_MAP"
+
+  if [ "$TOC_SOURCE" = "toc.ncx" ]; then
+    # Create the TOC HTML file
+    create_toc_file "$CSS_FILE" "$TOC_CONTENT"
+    echo "TOC generated at: $TOC_FILE"
+
+    # Ensure the TOC file is included in the list so it gets a navigation block.
+    TITLE_MAP="${TOC_FILE}|||Table of Contents\n${TITLE_MAP}"
+    FILE_LIST="${TOC_FILE} ${FILE_LIST}"
+  fi
+  log_debug "Final list of HTML files: $TITLE_MAP"
 fi
 
+
+
+log_debug "FILE_LIST:"
+log_debug "$FILE_LIST"
+log_debug "---"
+
 # Add navigation blocks to HTML files.
-[ -n "$HTML_FILES" ] && timer add_navigation $HTML_FILES && log_debug "Elapsed Time (add_navigation): ${elapsed}s"
+[ -n "$FILE_LIST" ] && timer add_navigation $FILE_LIST && log_debug "Elapsed Time (add_navigation): ${elapsed}s"
 echo "Navigation added to HTML files."
 
 # Calculate and log the total elapsed execution time.
