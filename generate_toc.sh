@@ -156,7 +156,7 @@ extract_toc_content() {
 #   - TOC_CONTENT is built as an unordered HTML list.
 generate_mapping_and_toc() {
     local extracted="$1"
-    local toc_content="<ul>"
+    local toc_content=""
     TITLE_MAP=""  # Reset mapping
     local prev=""
 
@@ -181,7 +181,7 @@ generate_mapping_and_toc() {
 $extracted
 EOF
 
-    toc_content="${toc_content}</ul>"
+    #toc_content="${toc_content}</ul>"
     TOC_CONTENT=$(printf "%b" "$toc_content")
 
     # Debug output: print the TITLE_MAP
@@ -200,7 +200,7 @@ EOF
 # and builds the mapping (filename|||title) and TOC HTML content.
 generate_toc_from_html_files() {
     local files=$(ls *.html *.xhtml 2>/dev/null | sort)
-    local toc_content="<ul>"
+    local toc_content=""
     TITLE_MAP=""
     for file in $files; do
         if [ "$file" = "$TOC_FILE" ]; then
@@ -212,7 +212,7 @@ generate_toc_from_html_files() {
         TITLE_MAP="${TITLE_MAP}${file}|||${title}\n"
         toc_content="${toc_content}<li><a href='$file'>$title</a></li>"
     done
-    toc_content="${toc_content}</ul>"
+    #toc_content="${toc_content}</ul>"
     TOC_CONTENT=$(printf "%b" "$toc_content")
 
     # Debug output: print the TITLE_MAP
@@ -239,7 +239,9 @@ create_toc_file() {
 </head>
 <body>
   <h1>Table of Contents</h1>
-  $toc_content
+  <ul>
+    $toc_content
+  </ul>
 </body>
 </html>
 EOF
@@ -430,14 +432,27 @@ else
   log_debug "PredFinal list of HTML files: $TITLE_MAP"
 
   if [ "$TOC_SOURCE" = "toc.ncx" ]; then
+    # Add TOC file to TOC list
+    title="Table of Contents"
+    TOC_CONTENT="<li><a href='$TOC_FILE'>$title</a></li>${TOC_CONTENT}"
+
+    # If a cover page exists, add it to the beginning of the file list.
+    COVER_PAGE=$(detect_cover_page)
+    [ -n "$COVER_PAGE" ] && TITLE_MAP="${COVER_PAGE}|||Cover\n${TITLE_MAP}"
+    TOC_CONTENT="<li><a href='$COVER_PAGE'>Cover</a></li>${TOC_CONTENT}"
+
     # Create the TOC HTML file
     create_toc_file "$CSS_FILE" "$TOC_CONTENT"
     echo "TOC generated at: $TOC_FILE"
 
     # Ensure the TOC file is included in the list so it gets a navigation block.
-    TITLE_MAP="${TOC_FILE}|||Table of Contents\n${TITLE_MAP}"
-    TITLE_MAP=$(printf "%b" "$TITLE_MAP")
+    TITLE_MAP="${TOC_FILE}|||$title\n${TITLE_MAP}"
     FILE_LIST="${TOC_FILE} ${FILE_LIST}"
+
+
+
+    TITLE_MAP=$(printf "%b" "$TITLE_MAP")
+    FILE_LIST="${COVER_PAGE} ${FILE_LIST}"
   fi
   log_debug "Final list of HTML files: $TITLE_MAP"
 fi
