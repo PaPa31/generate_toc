@@ -2,6 +2,9 @@
 # Exit immediately if a command exits with a non-zero status.
 set -e
 
+#####################################
+# Initialization & Debug Functions
+#####################################
 # Get the starting uptime (in seconds) to measure total execution time.
 main_timer_start=$(awk '{print $1}' /proc/uptime)
 
@@ -30,6 +33,9 @@ timer() {
     elapsed=$(echo "$end - $start" | bc)
 }
 
+#####################################
+# Directory & Path Setup
+#####################################
 # Check that a folder argument is provided.
 if [ -z "$1" ]; then
   error_response "Usage: $0 <folder>"
@@ -59,7 +65,7 @@ META='<meta name="viewport" content="width=device-width, initial-scale=1"/>'
 DARK_TOGGLE='<button id="dark-toggle">🌙</button>'
 BREADCRUMB_HOME="../../../../"
 BREADCRUMB_BOOK="../"
-TOC_CONTENT=""
+
 
 # Global variable for storing file-to-title mappings.
 # Each mapping line is in the format: filename|||title
@@ -68,19 +74,96 @@ TITLE_MAP=""
 #####################################
 # Detect and extract helper functions
 #####################################
-
 # Detect an existing CSS file by listing *.css files and returning the first result.
 detect_css_file() {
   ls *.css 2>/dev/null | head -n 1
 }
 
+#####################################
+# TOC Source Detection
+#####################################
 # Detect a TOC source file. This function checks for commonly used filenames.
 detect_toc_source() {
-  for file in "toc.xhtml" "nav.xhtml" "toc.ncx"; do
-    [ -f "$file" ] && echo "$file" && return
-  done
-  echo ""
+    if [ -f "nav.xhtml" ]; then
+        echo "nav.xhtml"
+    elif [ -f "toc.ncx" ]; then
+        echo "toc.ncx"
+    elif [ -f "toc.xhtml" ]; then
+        echo "toc.xhtml"
+    else
+        echo ""
+    fi
 }
+
+#####################################
+# New Function: Extract TOC Content
+#####################################
+extract_toc_content() {
+    local toc_source="$1"
+    if [ "$toc_source" = "toc.ncx" ]; then
+        # --- NCX Extraction ---
+        sed 's/<navPoint/\
+<navPoint/g' "$toc_source" | \
+        awk 'BEGIN{RS="<navPoint"; ORS="\n"} NR>1{
+          pos1=index($0,"<navLabel>"); title="";
+          if(pos1>0){
+            rest1=substr($0, pos1+length("<navLabel>"));
+            pos2=index(rest1,"<text>");
+            if(pos2>0){
+              rest2=substr(rest1, pos2+length("<text>"));
+              pos3=index(rest2,"</text>");
+              if(pos3>0) title=substr(rest2,1,pos3-1);
+            }
+          }
+          posC=index($0,"<content"); href="";
+          if(posC>0){
+            restC=substr($0, posC);
+            posS=index(restC,"src=\"");
+            if(posS>0){
+              restS=substr(restC, posS+length("src=\""));
+              posQ=index(restS,"\"");
+              if(posQ>0) href=substr(restS,1,posQ-1);
+            }
+          }
+          if(title!="" && href!="") print title " - " href;
+        }'
+    elif grep -q "<nav" "$toc_source"; then
+        # --- HTML Navigation Extraction ---
+        if grep -q '<nav[^>]*epub:type="toc"' "$toc_source"; then
+            sed 's/<nav/\n<nav/g' "$toc_source" | \
+            sed -n '/<nav[^>]*epub:type="toc"[^>]*>/,/<\/nav>/p' | \
+            sed 's/<li/\
+<li/g' | \
+            sed -n 's/.*<a href="\([^"]*\)">\([^<]*\)<\/a>.*/\2 - \1/p'
+        else
+            sed 's/<li/\
+<li/g' "$toc_source" | \
+            sed -n 's/.*<a href="\([^"]*\)">\([^<]*\)<\/a>.*/\2 - \1/p'
+        fi
+    else
+        echo ""
+    fi
+}
+
+#####################################
+# New Function: Generate TOC HTML from Extracted Lines
+#####################################
+generate_toc_from_extracted() {
+    local extracted="$1"
+    local toc_content="<ul>"
+    # Process each line (format: "Title - href")
+    echo "$extracted" | while IFS='-' read -r title href; do
+        # Trim whitespace from title and href.
+        title=$(echo "$title" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
+        href=$(echo "$href" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
+        toc_content="$toc_content<li><a href='$href'>$title</a></li>"
+    done
+    toc_content="$toc_content</ul>"
+    TOC_CONTENT="$toc_content"
+}
+
+
+
 
 # Detect a cover page, if one exists. This also handles extracting the cover from content.opf.
 detect_cover_page() {
@@ -158,6 +241,10 @@ generate_toc() {
   echo "TOC_CONTENT:"
   printf "%b" "$toc_content"
 }
+
+#####################################
+# Create TOC HTML File
+#####################################
 
 # Create the TOC HTML file using the generated TOC content.
 create_toc_file() {
@@ -307,21 +394,41 @@ echo "Javascript file located: $JS_FILE"
 
 # Determine the TOC source file (if available) and extract ordered HTML files.
 TOC_SOURCE=$(detect_toc_source)
-HTML_FILES=$(extract_ordered_files "$TOC_SOURCE")
+if [ -z "$TOC_SOURCE" ]; then
+    error_response "No TOC source file found (toc.ncx, nav.xhtml, or toc.xhtml)."
+fi
+
+# Extract the TOC content (lines of "Title - href")
+extracted_toc=$(extract_toc_content "$TOC_SOURCE")
+log_debug "Extracted TOC lines:"
+echo "$extracted_toc"
+
+# Generate the HTML TOC from the extracted lines.
+generate_toc_from_extracted "$extracted_toc"
+create_toc_file "$TOC_CONTENT"
+echo "TOC generated at: $TOC_FILE"
+
+
+#HTML_FILES=$(extract_ordered_files "$TOC_SOURCE")
+
+# Optionally, add navigation blocks to each HTML file if needed.
+# For example:
+ HTML_FILES=$(ls *.html *.xhtml 2>/dev/null | sort)
+# add_navigation "$HTML_FILES"
 
 # Ensure the TOC file is included in the list so it gets a navigation block.
 HTML_FILES="$TOC_FILE $HTML_FILES"
 
 # If a cover page exists, add it to the beginning of the file list.
-#COVER_PAGE=$(detect_cover_page)
-#[ -n "$COVER_PAGE" ] && HTML_FILES="$COVER_PAGE $HTML_FILES"
+COVER_PAGE=$(detect_cover_page)
+[ -n "$COVER_PAGE" ] && HTML_FILES="$COVER_PAGE $HTML_FILES"
 
 # Generate the TOC content and build the TITLE_MAP.
-generate_toc "$HTML_FILES"
+#generate_toc "$HTML_FILES"
 
 # Create the TOC HTML file.
-create_toc_file "$TOC_CONTENT"
-echo "TOC generated at: $TOC_FILE"
+#create_toc_file "$TOC_CONTENT"
+#echo "TOC generated at: $TOC_FILE"
 
 # Add navigation blocks to all HTML files and measure the time taken.
 timer add_navigation "$HTML_FILES"
