@@ -141,6 +141,10 @@ p {
 /* Page turning styles */
 .page-turning {
   display: inline-block;
+}
+
+.page-turning span,
+.page-turning a {
   font-size: 14px;
 }
 

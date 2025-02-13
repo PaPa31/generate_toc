@@ -304,7 +304,7 @@ add_navigation() {
   local prev=""
   local curr=""
   # A gap div to create vertical spacing for the navigation bar.
-  local gap="<div style=\"height: 70px;\"></div>"
+  local gap="<div style=\"height: 80px;\"></div>"
   # The content to insert between </head> and <body> (includes CSS link and meta tag).
   local between="$LINK_STYLES$META</head>"
 
