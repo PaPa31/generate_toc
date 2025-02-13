@@ -276,6 +276,7 @@ generate_breadcrumbs() {
 
   # Append the current page title (not a link).
   breadcrumbs="${breadcrumbs}<span>${current_title}</span>"
+  breadcrumbs="<div class=\"centerward\">${breadcrumbs}</div>"
 
   echo "$breadcrumbs"
 }

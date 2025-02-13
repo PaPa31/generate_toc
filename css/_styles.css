@@ -1,5 +1,9 @@
+/* start uni base */
 @charset "UTF-8";
 :root {
+  --uni-font-family-headers: Arial, Helvetica, sans-serif;
+  --uni-font-family-text: 'Times New Roman', Times, serif;
+
   --uni-color: #000000;
   --uni-background: #ffffff;
   --uni-scrollbar: #555555;
@@ -27,7 +31,7 @@
   --uni-button-color: #a4a400;
   --uni-button-background: #222222;
   --uni-image-filter: invert(1);
-  --uni-header-color: #ad4200;
+  /*--uni-header-color: #ad4200;*/
 
   --learning-ebpf--liz-rice-2023-code-n: #7373d1;
   --learning-ebpf--liz-rice-2023-sidebar-background: #000000;
@@ -42,7 +46,7 @@ body {
   background-color: var(--uni-background);
   color: var(--uni-color);
   line-height: 1.6;
-  font-family: 'Times New Roman', Times, serif;
+  font-family: var(--uni-font-family-text);
 }
 body > :not(.navigation) {
   margin: 10px;
@@ -53,7 +57,7 @@ h3,
 h4,
 h5,
 h6 {
-  color: var(--uni-header-color) !important;
+  color: var(--uni-header-color);
 }
 ul {
   list-style-type: none;
@@ -82,6 +86,8 @@ a[href]:hover {
   text-decoration: none;
 }
 
+/* end uni base */
+
 /* ---------- Start Navbar ---------- */
 .navigation {
   position: fixed;
@@ -93,7 +99,7 @@ a[href]:hover {
   background-color: var(--uni-background);
   transition: top 0.3s ease-in-out;
   z-index: 10;
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--uni-font-family-headers);
   padding: 8px 0;
 }
 .hidden {
@@ -157,6 +163,14 @@ a[href]:hover {
   background-color: rgba(255, 255, 255, 0.2);
 }
 
+.centerward {
+  max-width: calc(100% - 124px);
+  margin: 0 auto;
+  text-align: center;
+  text-overflow: ellipsis;
+  overflow: clip;
+}
+
 /* Breadcrumbs styles */
 .breadcrumbs {
   white-space: nowrap;
@@ -181,7 +195,7 @@ a[href]:hover {
   color: var(--uni-color);
 }
 
-.breadcrumbs > span:not(:last-child):after {
+.breadcrumbs span:not(:last-child):after {
   content: ' > ';
 }
 
@@ -233,6 +247,7 @@ a[href]:hover {
 }
 /* ---------- End Navbar ---------- */
 
+/* uni */
 img {
   filter: var(--uni-image-filter);
   opacity: 0.9;
@@ -251,6 +266,8 @@ img {
 ::-webkit-scrollbar-thumb:hover {
   background-color: var(--uni-scrollbarHover);
 }
+
+/* uni */
 
 /*-------------*/
 .w {
