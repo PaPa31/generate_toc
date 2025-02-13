@@ -74,9 +74,9 @@ FILE_LIST=""
 #####################################
 # Detect and extract helper functions
 #####################################
-# Detect an existing CSS file by listing *.css files and returning the first result.
+# Detect an existing CSS file by listing *.css files
 detect_css_file() {
-  ls *.css 2>/dev/null | head -n 1
+  ls *.css 2>/dev/null
 }
 
 #####################################
@@ -230,12 +230,19 @@ generate_toc_from_html_files() {
 create_toc_file() {
     local existing_css="$1"
     local toc_content="$2"
-    cat > "$TOC_FILE" <<EOF
+    local css_content=""
+
+    # Create <links> as many as css files found
+    for file in $existing_css; do
+        css_content="${css_content}<link type=\"text/css\" rel=\"stylesheet\" href=\"$file\"/>"
+    done
+
+  cat > "$TOC_FILE" <<EOF
 <!DOCTYPE html>
 <html>
 <head>
   <title>Table of Contents</title>
-  <link type="text/css" rel="stylesheet" href="$existing_css"/>
+  $css_content
 </head>
 <body>
   <h1>Table of Contents</h1>
@@ -376,6 +383,31 @@ add_navigation() {
   fi
 }
 
+cover_and_toc_handle () {
+    # Add TOC file to TOC list
+  local title="Table of Contents"
+  TOC_CONTENT="<li><a href='$TOC_FILE'>$title</a></li>${TOC_CONTENT}"
+
+  # Ensure the TOC file is included in the list so it gets a navigation block.
+  TITLE_MAP="${TOC_FILE}|||$title\n${TITLE_MAP}"
+  FILE_LIST="${TOC_FILE} ${FILE_LIST}"
+
+  # If a cover page exists, add it to the beginning of the file list.
+  COVER_PAGE=$(detect_cover_page)
+  if [ -n "$COVER_PAGE" ]; then
+    TITLE_MAP="${COVER_PAGE}|||Cover\n${TITLE_MAP}"
+    TOC_CONTENT="<li><a href='$COVER_PAGE'>Cover</a></li>${TOC_CONTENT}"
+    FILE_LIST="${COVER_PAGE} ${FILE_LIST}"
+  fi
+
+  TITLE_MAP=$(printf "%b" "$TITLE_MAP")
+
+  # Create the TOC HTML file
+  create_toc_file "$CSS_FILE" "$TOC_CONTENT"
+  echo "TOC generated at: $TOC_FILE"
+
+}
+
 #####################################
 # Main Execution Flow
 #####################################
@@ -404,20 +436,7 @@ if [ -z "$TOC_SOURCE" ]; then
   generate_toc_from_html_files
   log_debug "Created list of HTML files: $TITLE_MAP"
 
-  # Create the TOC HTML file
-  create_toc_file "$CSS_FILE" "$TOC_CONTENT"
-  echo "TOC generated at: $TOC_FILE"
-
-  # Ensure the TOC file is included in the list so it gets a navigation block.
-  #HTML_FILES="$TOC_FILE $HTML_FILES"
-  TITLE_MAP="${TOC_FILE}|||Table of Contents\n${TITLE_MAP}"
-  TITLE_MAP=$(printf "%b" "$TITLE_MAP")
-  FILE_LIST="${TOC_FILE} ${FILE_LIST}"
-
-  # If a cover page exists, add it to the beginning of the file list.
-  COVER_PAGE=$(detect_cover_page)
-  #[ -n "$COVER_PAGE" ] && HTML_FILES="$COVER_PAGE $HTML_FILES"
-  [ -n "$COVER_PAGE" ] && TITLE_MAP="${COVER_PAGE}|||Cover\n${TITLE_MAP}"
+  cover_and_toc_handle
   log_debug "Final list of HTML files: $TITLE_MAP"
 else
   # Path 2: TOC source file found → Extract data from it.
@@ -432,33 +451,9 @@ else
   generate_mapping_and_toc "$extracted_toc"
   log_debug "PredFinal list of HTML files: $TITLE_MAP"
 
-  if [ "$TOC_SOURCE" = "toc.ncx" ]; then
-    # Add TOC file to TOC list
-    title="Table of Contents"
-    TOC_CONTENT="<li><a href='$TOC_FILE'>$title</a></li>${TOC_CONTENT}"
-
-    # If a cover page exists, add it to the beginning of the file list.
-    COVER_PAGE=$(detect_cover_page)
-    [ -n "$COVER_PAGE" ] && TITLE_MAP="${COVER_PAGE}|||Cover\n${TITLE_MAP}"
-    TOC_CONTENT="<li><a href='$COVER_PAGE'>Cover</a></li>${TOC_CONTENT}"
-
-    # Create the TOC HTML file
-    create_toc_file "$CSS_FILE" "$TOC_CONTENT"
-    echo "TOC generated at: $TOC_FILE"
-
-    # Ensure the TOC file is included in the list so it gets a navigation block.
-    TITLE_MAP="${TOC_FILE}|||$title\n${TITLE_MAP}"
-    FILE_LIST="${TOC_FILE} ${FILE_LIST}"
-
-
-
-    TITLE_MAP=$(printf "%b" "$TITLE_MAP")
-    FILE_LIST="${COVER_PAGE} ${FILE_LIST}"
-  fi
+  [ "$TOC_SOURCE" = "toc.ncx" ] && cover_and_toc_handle
   log_debug "Final list of HTML files: $TITLE_MAP"
 fi
-
-
 
 log_debug "FILE_LIST:"
 log_debug "$FILE_LIST"

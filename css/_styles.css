@@ -65,6 +65,9 @@ ul {
   list-style-type: none;
   padding: 0;
 }
+a {
+  font-family: var(--uni-font-family-headers);
+}
 a:not([href]),
 a:not([href]):active {
   color: inherit;
