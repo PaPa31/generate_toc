@@ -65,7 +65,7 @@ ul {
   list-style-type: none;
   padding: 0;
 }
-a {
+ul.toc a {
   font-family: var(--uni-font-family-headers);
 }
 a:not([href]),

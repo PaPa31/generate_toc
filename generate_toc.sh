@@ -246,7 +246,7 @@ create_toc_file() {
 </head>
 <body>
   <h1>Table of Contents</h1>
-  <ul>
+  <ul class="toc">
     $toc_content
   </ul>
 </body>
