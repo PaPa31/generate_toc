@@ -271,12 +271,12 @@ generate_breadcrumbs() {
 
   # Add a Home link if defined.
   if [ -n "$BREADCRUMB_HOME" ]; then
-    breadcrumbs="<a href=\"$BREADCRUMB_HOME\">Home</a><span></span>"
+    breadcrumbs="<span><a href=\"$BREADCRUMB_HOME\">Home</a></span>"
   fi
 
   # Add a Book link if defined.
   if [ -n "$BREADCRUMB_BOOK" ]; then
-    breadcrumbs="${breadcrumbs}<a href=\"$BREADCRUMB_BOOK\">Book</a><span></span>"
+    breadcrumbs="${breadcrumbs}<span><a href=\"$BREADCRUMB_BOOK\">Book</a></span>"
   fi
 
   # Append the current page title (not a link).

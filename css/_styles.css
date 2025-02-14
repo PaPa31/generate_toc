@@ -195,7 +195,8 @@ p {
   margin: 0 auto;
   text-align: left;
   text-overflow: ellipsis;
-  overflow: clip;
+  overflow-x: clip; /* for TAB outline */
+  padding-left: 3px; /* too */
 }
 
 /* Breadcrumbs styles */
