@@ -65,8 +65,15 @@ ul {
   list-style-type: none;
   padding: 0;
 }
+ul.toc > li {
+  list-style-type: none !important;
+}
 ul.toc a {
   font-family: var(--uni-font-family-headers);
+}
+img {
+  filter: var(--uni-image-filter);
+  opacity: 0.9;
 }
 a:not([href]),
 a:not([href]):active {
@@ -195,6 +202,7 @@ p {
   margin: 0 auto;
   text-align: left;
   text-overflow: ellipsis;
+  max-width: 400px;
   overflow-x: clip; /* for TAB outline */
   padding-left: 3px; /* too */
 }
