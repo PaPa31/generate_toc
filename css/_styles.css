@@ -193,7 +193,7 @@ p {
 .centerward {
   max-width: calc(100% - 124px);
   margin: 0 auto;
-  text-align: center;
+  text-align: left;
   text-overflow: ellipsis;
   overflow: clip;
 }
