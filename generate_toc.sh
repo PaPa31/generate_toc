@@ -387,18 +387,18 @@ cover_and_toc_handle () {
   TOC_CONTENT="<li><a href='$TOC_FILE'>$title</a></li>${TOC_CONTENT}"
 
   # Ensure the TOC file is included in the list so it gets a navigation block.
-  #TITLE_MAP="${TOC_FILE}@$title\n${TITLE_MAP}"
-  #FILE_LIST="${TOC_FILE} ${FILE_LIST}"
+  TITLE_MAP="${TOC_FILE}@$title\n${TITLE_MAP}"
+  FILE_LIST="${TOC_FILE} ${FILE_LIST}"
 
   # If a cover page exists, add it to the beginning of the file list.
-  #COVER_PAGE=$(detect_cover_page)
-  #if [ -n "$COVER_PAGE" ]; then
-  #  TITLE_MAP="${COVER_PAGE}@Cover\n${TITLE_MAP}"
-  #  TOC_CONTENT="<li><a href='$COVER_PAGE'>Cover</a></li>${TOC_CONTENT}"
-  #  FILE_LIST="${COVER_PAGE} ${FILE_LIST}"
-  #fi
+  COVER_PAGE=$(detect_cover_page)
+  if [ -n "$COVER_PAGE" ]; then
+    TITLE_MAP="${COVER_PAGE}@Cover\n${TITLE_MAP}"
+    TOC_CONTENT="<li><a href='$COVER_PAGE'>Cover</a></li>${TOC_CONTENT}"
+    FILE_LIST="${COVER_PAGE} ${FILE_LIST}"
+  fi
 
-  #TITLE_MAP=$(printf "%b" "$TITLE_MAP")
+  TITLE_MAP=$(printf "%b" "$TITLE_MAP")
 
   # Create the TOC HTML file
   create_toc_file "$CSS_FILE" "$TOC_CONTENT"
