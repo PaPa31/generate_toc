@@ -67,7 +67,7 @@ BREADCRUMB_HOME="../../../../"
 BREADCRUMB_BOOK="../"
 
 # Global variable for storing file-to-title mappings.
-TITLE_MAP=""     # Will hold mapping lines: href|||title
+TITLE_MAP=""     # Will hold mapping lines: href@title
 TOC_CONTENT=""   # Will hold the final TOC HTML content
 FILE_LIST=""
 
@@ -127,7 +127,7 @@ extract_toc_content() {
               if(posQ>0) href=substr(restS,1,posQ-1);
             }
           }
-          if(title!="" && href!="") print title " - " href;
+          if(title!="" && href!="") print href "@" title;
         }'
     elif grep -q "<nav" "$toc_source"; then
         # --- HTML Navigation Extraction ---
@@ -136,11 +136,11 @@ extract_toc_content() {
             sed -n '/<nav[^>]*epub:type="toc"[^>]*>/,/<\/nav>/p' | \
             sed 's/<li/\
 <li/g' | \
-            sed -n 's/.*<a href="\([^"]*\)">\([^<]*\)<\/a>.*/\2 - \1/p'
+            sed -n 's/.*<a href="\([^"]*\)">\([^<]*\)<\/a>.*/\1@\2/p'
         else
             sed 's/<li/\
 <li/g' "$toc_source" | \
-            sed -n 's/.*<a href="\([^"]*\)">\([^<]*\)<\/a>.*/\2 - \1/p'
+            sed -n 's/.*<a href="\([^"]*\)">\([^<]*\)<\/a>.*/\1@\2/p'
         fi
     else
         echo ""
@@ -152,25 +152,23 @@ extract_toc_content() {
 #####################################
 # Input: Lines in the format "Title - href"
 # Output: 
-#   - TITLE_MAP is built in the format "href|||title" (and written to file "map")
+#   - TITLE_MAP is built in the format "href@title" (and written to file "map")
 #   - TOC_CONTENT is built as an unordered HTML list.
 generate_mapping_and_toc() {
     local extracted="$1"
     local toc_content=""
-    TITLE_MAP=""  # Reset mapping
+    #TITLE_MAP=""  # Reset mapping
     local prev=""
-
+ 
     # Use a here-document so that the while loop runs in the current shell (avoiding subshell issues)
-    while IFS='-' read -r title href; do
-        # Trim whitespace from title and href.
-        title=$(echo "$title" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
-        href=$(echo "$href" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
+    while IFS='@' read -r href title; do
+
         # Remove any anchor (fragment) from the file name.
         local strip_anchor=$(echo "$href" | cut -d '#' -f 1)
         # Ignore if filename repeat
         if [ "$prev" != "$strip_anchor" ]; then
-          # Append to mapping in the format: href|||title (each mapping separated by a newline)
-          TITLE_MAP="${TITLE_MAP}${strip_anchor}|||${title}\n"
+          # Append to mapping in the format: href@title (each mapping separated by a newline)
+          #TITLE_MAP="${TITLE_MAP}${strip_anchor}@${title}\n"
           # Populate HTML file list
           FILE_LIST="${FILE_LIST}${strip_anchor} "
         fi
@@ -185,11 +183,11 @@ EOF
     TOC_CONTENT=$(printf "%b" "$toc_content")
 
     # Debug output: print the TITLE_MAP
-    echo "TITLE_MAP:"
-    printf "%b" "$TITLE_MAP"
+    #echo "TITLE_MAP:"
+    #printf "%b" "$TITLE_MAP"
 
     # Optionally, write the mapping to a file named "map"
-    printf "%b" "$TITLE_MAP" > map
+    #printf "%b" "$TITLE_MAP" > map
 }
 
 #####################################
@@ -197,7 +195,7 @@ EOF
 #####################################
 # This function is used when no TOC source file is found.
 # It scans all HTML files in the directory, extracts the <title> from each,
-# and builds the mapping (filename|||title) and TOC HTML content.
+# and builds the mapping (filename@title) and TOC HTML content.
 generate_toc_from_html_files() {
     local files=$(ls *.html *.xhtml 2>/dev/null | sort)
     local toc_content=""
@@ -209,7 +207,7 @@ generate_toc_from_html_files() {
             title=$(awk -F'<title>|</title>' '/<title>/ {print $2; exit}' "$file")
             [ -z "$title" ] && title="$file"
         fi
-        TITLE_MAP="${TITLE_MAP}${file}|||${title}\n"
+        TITLE_MAP="${TITLE_MAP}${file}@${title}\n"
         toc_content="${toc_content}<li><a href='$file'>$title</a></li>"
     done
     #toc_content="${toc_content}</ul>"
@@ -292,13 +290,13 @@ generate_breadcrumbs() {
 lookup_title() {
   local file="$1"
   # Use printf to interpret the escape sequences in TITLE_MAP, then grep for the matching line.
-  printf "%b" "$TITLE_MAP" | grep "^$file|||"
+  printf "%b" "$TITLE_MAP" | grep "^$file@"
 }
 
 #####################################
 # (Existing) Navigation Insertion Function
 #####################################
-# This function uses TITLE_MAP (in href|||title format) to add Previous/Next navigation blocks to each HTML file.
+# This function uses TITLE_MAP (in href@title format) to add Previous/Next navigation blocks to each HTML file.
 add_navigation() {
   local files="$@"
   local prev=""
@@ -317,12 +315,12 @@ add_navigation() {
     # Only process if there is a current file and it's different from the next file.
     if [ -n "$curr" ] && [ "$strip_anchor" != "$curr" ]; then
       echo "Curr: $curr"
-      # Lookup the title for curr from TITLE_MAP (format: filename|||title)
-      local mapping_line=$(printf "%b" "$TITLE_MAP" | grep "^$curr|||")
+      # Lookup the title for curr from TITLE_MAP (format: filename@title)
+      local mapping_line=$(printf "%b" "$TITLE_MAP" | grep "^$curr#*.*@")
       echo "Mapping Line: $mapping_line"
 
-      # Extract the title using the "|||" delimiter.
-      local current_title=$(echo "$mapping_line" | cut -d '|' -f 4)
+      # Extract the title using the "@" delimiter.
+      local current_title=$(echo "$mapping_line" | head -n 1 | cut -d '@' -f 2)
       [ -z "$current_title" ] && current_title="$curr"
       echo "Current Title: $current_title"
 
@@ -360,10 +358,10 @@ add_navigation() {
   # Process the final file in the list.
   if [ -n "$curr" ]; then
     echo "Previous: $prev   Current: $curr"
-    local mapping_line=$(printf "%b" "$TITLE_MAP" | grep "^$curr|||")
+    local mapping_line=$(printf "%b" "$TITLE_MAP" | grep "^$curr#*.*@")
     echo "mapping line: $mapping_line"
 
-    local current_title=$(echo "$mapping_line" | cut -d '|' -f 4)
+    local current_title=$(echo "$mapping_line" | head -n 1 | cut -d '@' -f 2)
     [ -z "$current_title" ] && current_title="$curr"
     echo "Current Title: $current_title"
 
@@ -389,18 +387,18 @@ cover_and_toc_handle () {
   TOC_CONTENT="<li><a href='$TOC_FILE'>$title</a></li>${TOC_CONTENT}"
 
   # Ensure the TOC file is included in the list so it gets a navigation block.
-  TITLE_MAP="${TOC_FILE}|||$title\n${TITLE_MAP}"
-  FILE_LIST="${TOC_FILE} ${FILE_LIST}"
+  #TITLE_MAP="${TOC_FILE}@$title\n${TITLE_MAP}"
+  #FILE_LIST="${TOC_FILE} ${FILE_LIST}"
 
   # If a cover page exists, add it to the beginning of the file list.
-  COVER_PAGE=$(detect_cover_page)
-  if [ -n "$COVER_PAGE" ]; then
-    TITLE_MAP="${COVER_PAGE}|||Cover\n${TITLE_MAP}"
-    TOC_CONTENT="<li><a href='$COVER_PAGE'>Cover</a></li>${TOC_CONTENT}"
-    FILE_LIST="${COVER_PAGE} ${FILE_LIST}"
-  fi
+  #COVER_PAGE=$(detect_cover_page)
+  #if [ -n "$COVER_PAGE" ]; then
+  #  TITLE_MAP="${COVER_PAGE}@Cover\n${TITLE_MAP}"
+  #  TOC_CONTENT="<li><a href='$COVER_PAGE'>Cover</a></li>${TOC_CONTENT}"
+  #  FILE_LIST="${COVER_PAGE} ${FILE_LIST}"
+  #fi
 
-  TITLE_MAP=$(printf "%b" "$TITLE_MAP")
+  #TITLE_MAP=$(printf "%b" "$TITLE_MAP")
 
   # Create the TOC HTML file
   create_toc_file "$CSS_FILE" "$TOC_CONTENT"
@@ -419,13 +417,13 @@ log_debug "Generate TOC Script Started"
 CSS_FILE=$(detect_css_file)
 log_debug "Existing CSS file found: $CSS_FILE"
 
-echo
+echo ""
 
 # Show paths to Uni-CSS and JavaScript files.
 echo "The Uni-styles file is located: $STYLES_FILE"
 echo "The injected JavaScript file is located: $JS_FILE"
 
-echo
+echo ""
 
 # TOC Source Detection
 TOC_SOURCE=$(detect_toc_source)
@@ -443,16 +441,21 @@ else
   log_debug "Detected TOC source: $TOC_SOURCE"
 
   # Extract TOC lines from the navigation file.
-  extracted_toc=$(extract_toc_content "$TOC_SOURCE")
-  log_debug "Extracted TOC lines:"
-  echo "$extracted_toc"
+  TITLE_MAP=$(timer extract_toc_content "$TOC_SOURCE") && log_debug "Total Elapsed Time(extract_toc_content): ${elapsed}s"
+  echo "$TITLE_MAP" > nav
+  log_debug "Extracted MAP:"
+  echo "$TITLE_MAP" | hexdump -C
 
   # Build the mapping and the TOC HTML content.
-  generate_mapping_and_toc "$extracted_toc"
-  log_debug "PredFinal list of HTML files: $TITLE_MAP"
+  timer generate_mapping_and_toc "$TITLE_MAP" && log_debug "Total Elapsed Time(generate_toc): ${elapsed}s"
+  echo "$TOC_CONTENT" > ul
+  log_debug "TOC content:"
+  log_debug "$TOC_CONTENT"
+
 
   [ "$TOC_SOURCE" = "toc.ncx" ] && cover_and_toc_handle
-  log_debug "Final list of HTML files: $TITLE_MAP"
+  log_debug "Final MAP:"
+  log_debug "$TITLE_MAP"
 fi
 
 log_debug "FILE_LIST:"
