@@ -345,7 +345,7 @@ add_navigation() {
       local rep="${gap}${nav_block}${SCRIPT}"
       # Use sed to search for the pattern </head> followed by any whitespace and <body>
       # and replace it with our custom navigation block.
-      sed -i -e ":a;N;\$!ba;s|</head>[ \t\r\n]*\(<body[^>]*>\)|${between}\1${rep}|g" "$curr"
+      sed -i -e ":a;N;\$!ba;s|</head>[ \t\r\n]*\(<body[^>]*>\)|${between}\1${rep}|" "$curr"
 
       # Set the previous file to the current one for navigation purposes.
       prev="$curr"
@@ -377,7 +377,7 @@ add_navigation() {
     nav_block="${nav_block}</div>"
 
     local rep="${gap}${nav_block}${SCRIPT}"
-    sed -i -e ":a;N;\$!ba;s|</head>[ \t\r\n]*\(<body[^>]*>\)|${between}\1${rep}|g" "$curr"
+    sed -i -e ":a;N;\$!ba;s|</head>[ \t\r\n]*\(<body[^>]*>\)|${between}\1${rep}|" "$curr"
   fi
 }
 
