@@ -92,19 +92,19 @@ a:active {
   color: var(--uni-link-active);
 }
 a[href] {
-  color: var(--uni-link);
+  /*color: var(--uni-link);*/
   text-decoration: underline;
 }
 
 a[href]:hover {
   text-decoration: none;
 }
-/*a[href]:active {
+a[href]:active {
   color: var(--uni-link-active);
 }
 a[href]:visited {
   color: var(--uni-link-visited);
-}*/
+}
 
 p {
   line-height: 1.6;
