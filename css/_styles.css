@@ -403,7 +403,7 @@ div[data-type='note'] {
 
 /*-------------*/
 /* start learning-ebpf--liz-rice-2023 */
-.w {
+:not(pre) > code.w {
   font-family: inherit;
 }
 pre code.p {
