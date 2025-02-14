@@ -72,31 +72,32 @@ a:not([href]),
 a:not([href]):active {
   color: inherit;
 }
-/*a.link,
+a.link,
 a {
   color: var(--uni-link);
-}*/
-/*a.link:visited,
+}
+a.link:visited,
 a:visited {
   color: var(--uni-link-visited);
 }
 a.link:active,
 a:active {
   color: var(--uni-link-active);
-}*/
+}
 a[href] {
   color: var(--uni-link);
   text-decoration: underline;
 }
+
 a[href]:hover {
   text-decoration: none;
 }
-a[href]:active {
+/*a[href]:active {
   color: var(--uni-link-active);
 }
 a[href]:visited {
   color: var(--uni-link-visited);
-}
+}*/
 
 p {
   line-height: 1.6;
