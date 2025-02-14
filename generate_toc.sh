@@ -444,7 +444,7 @@ else
   TITLE_MAP=$(timer extract_toc_content "$TOC_SOURCE") && log_debug "Total Elapsed Time(extract_toc_content): ${elapsed}s"
   echo "$TITLE_MAP" > nav
   log_debug "Extracted MAP:"
-  echo "$TITLE_MAP" | hexdump -C
+  echo "$TITLE_MAP"
 
   # Build the mapping and the TOC HTML content.
   timer generate_mapping_and_toc "$TITLE_MAP" && log_debug "Total Elapsed Time(generate_toc): ${elapsed}s"
