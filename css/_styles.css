@@ -414,8 +414,16 @@ pre code.n {
   color: var(--uni-color-code-n);
 }
 div.sidebar {
-  background-color: var(--uni-background);
+  background-color: var(--uni-background-1);
   border: 1px solid var(--uni-demi-visible-border);
+}
+div.index h3 {
+  background-color: var(--uni-background-1);
+}
+div.figure h6,
+figure h6,
+figure figcaption {
+  font-size: inherit !important;
 }
 pre[data-code-language='c'] {
   white-space: pre-line;
